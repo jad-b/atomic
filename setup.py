@@ -29,7 +29,7 @@ setup(
     # Version is the most-recent git tag that's accessible via current commit.
     version=latest_git_tag(),
     long_description=readme(),
-    description='Playing with tres.',
+    description='In pursuit of the next step.',
     author='jad-b',
     author_email='j.american.db@gmail.com',
     url='https://github.com/jad-b/atomic',
