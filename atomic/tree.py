@@ -3,21 +3,61 @@ tree
 ====
 
 I like trees.
+
+func vis(t tree) {
+    if len(t) == 0 {
+        fmt.Println("<empty>")
+        return
+    }
+    var f func(int, string)
+    f = func(n int, pre string) {
+        ch := t[n].children
+        if len(ch) == 0 {
+            fmt.Println("╴", t[n].label)
+            return
+        }
+        fmt.Println("┐", t[n].label)
+        last := len(ch) - 1
+        for _, ch := range ch[:last] {
+            fmt.Print(pre, "├─")
+            f(ch, pre+"│ ")
+        }
+        fmt.Print(pre, "└─")
+        f(ch[last], pre+"  ")
+    }
+    f(0, "")
+}
 """
 import collections
 
-class Tree:
+class TreeParts(enum.Enum):
+    parent = '┐'
+    leaf = '-'
+    child = '├─'
+    last_child = '└─'
+    bar = '|'
 
-    def __init__(self, root=None):
-        self.root = None
+
+def viz(root):
+    """Visualize a tree via print statements.
+
+    Nodes are expected to provide the following interface:
+        node.children
+        node.name
+    """
+
+
 
 
 class Node:
 
-    def __init__(self, **kwargs):
+    def __init__(self, data=None, **kwargs):
         self.tags = []
         self.children = []
-        self.data = kwargs
+        if data: # accept a data argument
+            self.data = data
+        elif len(kwargs): # compile keyword arguments
+            self.data = kwargs
 
     def add_child(self, *args, **kwargs):
         n = Node(*args, **kwargs)
