@@ -34,10 +34,13 @@ setup(
     author_email='j.american.db@gmail.com',
     url='https://github.com/jad-b/atomic',
     packages=['atomic'],
-    install_requires=requirements('reqs.txt'),
+    install_requires=(
+        'blist>=1.3,<2',
+        'sqlalchemy>=1.0.0,<2'
+    ),
     entry_points={
         'console_scripts': [
-            'atomic=main:main',
+            'valence=atomic.shell:main',
         ]
     },
     zip_safe=False,
@@ -47,7 +50,6 @@ setup(
         'Intended Audience :: Developers',
         'Natural Language :: English',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5'
     ),
 )
