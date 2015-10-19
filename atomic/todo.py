@@ -28,6 +28,7 @@ class Todo:
         self.desc = desc
         self.due = due
         self.data = data
+        self.tags = (,)
 
     def __repr__(self):
         return "{due} {name}: {desc}".format(name=self.name, due=self.due, desc=self.desc)
@@ -55,7 +56,7 @@ class Todo:
         # Map parsing functions against arguments
         args = []
         for i, part in enumerate(parts):
-            args.append(parse_fns[i](part))
+            args.append(parse_fns[i](part.strip()))
 
         return cls(*args)
 
