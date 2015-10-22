@@ -6,10 +6,12 @@ import re
 import sys
 import traceback
 from pprint import pprint
+from datetime import timedelta
 from importlib import reload
 
 from atomic.todo import Todo
 
+import pytimeparse
 
 _user = os.getenv('USER', 'user')
 
@@ -61,6 +63,8 @@ class Valence(cmd.Cmd):
         for i, thing in enumerate(self.things):
             if not getattr(thing, 'tags', False):
                 thing.tags = ()    # Assign default of no tags
+            if not getattr(thing, 'timelog', False):
+                thing.timelog = timedelta()
 
     def do_push(self, arg):
         # Push a new todo on the end
@@ -77,9 +81,19 @@ class Valence(cmd.Cmd):
         else:
             print(self.things.pop())
 
+    def get(self, idx):
+        return self.things[idx]
+
     def do_clear(self, arg):
         if input_bool():
             self.things.clear()
+
+    def do_done(self, arg):
+        idx, delta = arg.split()
+        # Update with logged time and 'complete' status
+        item = self.get(int(idx))
+        item.log(delta)
+        item.tags += item.tags + ('complete',)
 
     def do_tag(self, arg):
         m = re.match(r'^(?P<idx>\d+)\s+(?P<tags>.+)$', arg)
@@ -131,6 +145,14 @@ Usage: move <old position> <new position>
 
     def do_reload(self, arg):
         raise ReloadException("Code reload requested by user")
+
+    def do_active(self, arg):
+        for i, thing in self.active:
+            print('{}) {}'.format(i, thing))
+
+    @property
+    def active(self):
+        return ((i, x) for i, x in enumerate(self.things) if 'complete' not in x.tags)
 
 
 def input_bool(msg='Are you sure?', truths=('y', 'yes')):

@@ -4,6 +4,9 @@ todo
 
 Everyone's got stuff to do.
 """
+from datetime import datetime, date, time, timedelta
+
+import pytimeparse
 
 timestamp_formats = (
     "%d",               # Day: 16
@@ -28,7 +31,16 @@ class Todo:
         self.desc = desc
         self.due = due
         self.data = data
-        self.tags = (,)
+        self.timelog = timedelta()
+        self.tags = ()
+
+    def log(self, delta):
+        """Attach a logged amount of work on the todo."""
+        if isinstance(delta, str):  # Convert to timedelta
+            delta = timedelta(seconds=pytimeparse.parse(delta))
+        assert isinstance(delta, timedelta)
+        self.timelog += delta
+
 
     def __repr__(self):
         return "{due} {name}: {desc}".format(name=self.name, due=self.due, desc=self.desc)
@@ -50,6 +62,7 @@ class Todo:
         parse_fns = (
                 identity_fn,
                 identity_fn,
+                parse_tags,
                 parse_datetime
         )
 
@@ -75,9 +88,12 @@ def parse_datetime(line, formats=timestamp_formats):
 
 def starting_date():
     # Use current year/month/day, and zero values for hours/min/ms
-    today = datetime.combine(date.today(), time())
+    return datetime.combine(date.today(), time())
 
 def smart_date(dt):
     """Combine the parsed date/time/datetime with the current date to allow for
     shorthand date entry."""
 
+def parse_tags(line):
+    """Parse a csv tag string."""
+    return [x.strip() for x in line.split(',')]
