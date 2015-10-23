@@ -101,6 +101,17 @@ class Valence(cmd.Cmd):
         else:
             print(self.things.pop())
 
+    def do_set(self, arg):
+        idx, key, val = arg.split(maxsplit=2)
+        thing = self.things[int(idx)]
+        curr = thing.get(key, False)
+        if curr and not isinstance(curr, str):
+            orig = type(curr)
+            print("Trying to save value as {}".format(str(orig)))
+            thing[key] = orig(val)
+        else:
+            thing[key] = val
+
     def get(self, idx):
         return self.things[idx]
 
