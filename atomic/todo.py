@@ -34,14 +34,6 @@ class Todo:
         self.timelog = timedelta()
         self.tags = ()
 
-    def log(self, delta):
-        """Attach a logged amount of work on the todo."""
-        if isinstance(delta, str):  # Convert to timedelta
-            delta = timedelta(seconds=pytimeparse.parse(delta))
-        assert isinstance(delta, timedelta)
-        self.timelog += delta
-
-
     def __repr__(self):
         return "{due} {name}: {desc}".format(name=self.name, due=self.due, desc=self.desc)
     def __str__(self):
@@ -72,6 +64,15 @@ class Todo:
             args.append(parse_fns[i](part.strip()))
 
         return cls(*args)
+
+
+def log(orig, delta):
+    """Attach a logged amount of work on the todo."""
+    if isinstance(delta, str):  # Convert to timedelta
+        delta = timedelta(seconds=pytimeparse.parse(delta))
+    assert isinstance(delta, timedelta)
+    return orig + delta
+
 
 
 def parse_datetime(line, formats=timestamp_formats):

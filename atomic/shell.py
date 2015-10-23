@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 import cmd
 import os
+import itertools
 import pickle
 import re
 import sys
 import traceback
+import textwrap
 from pprint import pprint
 from datetime import timedelta
 from importlib import reload
 
-from atomic.todo import Todo
+from atomic.todo import Todo, log
 
 import pytimeparse
 
@@ -21,7 +23,13 @@ class ReloadException(Exception):
 
 
 class QuitException(Exception):
-    pass
+
+    def __init__(self, message):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        return self.message
 
 
 class Valence(cmd.Cmd):
@@ -37,7 +45,7 @@ class Valence(cmd.Cmd):
         while True:
             try:
                 super().cmdloop()
-            except ReloadException:
+            except (ReloadException, QuitException):
                 raise
             except Exception as e:     # Don't die on exceptions, only user quits (^-c)
                 traceback.print_exception(*sys.exc_info())
@@ -52,19 +60,31 @@ class Valence(cmd.Cmd):
             """))
 
     def do_list(self, arg):
-        pprint_items(self.things)
+        if arg == "":
+            pprint_items(self.things)
+        else:
+            # Filter on given keys
+            keys = set(arg.split())
+            print("Filtering on {}".format(keys))
+            view = []
+            for thing in self.things:
+                view.append({k:v for k, v in thing.items() if k in keys})
+            pprint_items(view)
 
     def do_ls(self, arg):
         """Alias for 'list'."""
         self.do_list(arg)
 
-    def do_convert(self, arg):
-        """Convert all tasks to Todos."""
-        for i, thing in enumerate(self.things):
-            if not getattr(thing, 'tags', False):
-                thing.tags = ()    # Assign default of no tags
-            if not getattr(thing, 'timelog', False):
-                thing.timelog = timedelta()
+    def do_review(self, arg):
+        for thing in self.things:
+            if 'review' in thing:
+                # Re-use saved questions and previous answers
+                 thing['review'] = conduct_review(thing['review'])
+            else:
+                questions = (survey.QUESTIONS['power_of_less'] +
+                    survey.QUESTIONS['one_to_ten'])
+            thing['review'] = conduct_review(zip(questions,
+                itertools.repeat('')))
 
     def do_push(self, arg):
         # Push a new todo on the end
@@ -92,18 +112,21 @@ class Valence(cmd.Cmd):
         idx, delta = arg.split()
         # Update with logged time and 'complete' status
         item = self.get(int(idx))
-        item.log(delta)
-        item.tags += item.tags + ('complete',)
+        item['log'] = todo.log(item['log'], delta)
+        item['tags'] +=('complete',)
 
     def do_tag(self, arg):
+        # 3 cat dog
+        # idx: 3
+        # tags: (cat, dog)
         m = re.match(r'^(?P<idx>\d+)\s+(?P<tags>.+)$', arg)
         idx = int(m.groupdict()['idx'])
         tags = m.groupdict()['tags'].split()
         thing = self.things[idx]
-        if getattr(thing, 'tags', False):   # Retieve existing tag list
+        if thing.get('tags', False):   # Retieve existing tag list
             thing.extend(tags)
         else:                               # Attach new tag list
-            setattr(thing, 'tags', tags)
+            thing['tags']  = tags
 
     def do_tags(self, arg):
         """Show all objects with insersection of ``tags``."""
@@ -162,7 +185,13 @@ def input_bool(msg='Are you sure?', truths=('y', 'yes')):
 
 def pprint_items(things):
     for i, thing in enumerate(things):
-        print('{}) {}'.format(i, thing))
+        print('{})'.format(i))
+        print('\n'.join(pformat_dict(thing, '  ')))
+
+
+def pformat_dict(d, prefix=''):
+    for k, v in d.items():
+        yield ("{}{}: {}".format(prefix, k, v))
 
 
 def loop():
@@ -208,7 +237,9 @@ def main():
                     if input_bool('\nRetry?'):
                         continue
                     raise                       # Exit program via exception
-
+        except QuitException as qe:
+            print(qe)
+            break
 
 if __name__ == '__main__':
     main()
