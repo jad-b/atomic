@@ -12,6 +12,7 @@ from datetime import timedelta
 from importlib import reload
 
 from atomic.todo import Todo, log
+from atomic import survey
 
 import pytimeparse
 
@@ -75,16 +76,23 @@ class Valence(cmd.Cmd):
         """Alias for 'list'."""
         self.do_list(arg)
 
-    def do_review(self, arg):
-        for thing in self.things:
-            if 'review' in thing:
-                # Re-use saved questions and previous answers
-                 thing['review'] = conduct_review(thing['review'])
-            else:
-                questions = (survey.QUESTIONS['power_of_less'] +
-                    survey.QUESTIONS['one_to_ten'])
-            thing['review'] = conduct_review(zip(questions,
-                itertools.repeat('')))
+    def do_show(self, arg):
+        pprint_items([self.get(int(arg))])
+
+    def do_eval(self, arg):
+        if arg == "":
+            print("You need to supply the item index")
+            self.do_ls("name")
+            return
+        idx = int(arg)
+        thing = self.things[idx]
+        if 'eval' in thing:
+            # Re-use saved questions and previous answers
+             q, a = zip(*thing['eval'])
+        else:
+            q, a = (survey.QUESTIONS['power_of_less'] +
+                survey.QUESTIONS['one_to_ten']), itertools.repeat('')
+        thing['eval'] = survey.conduct_survey(q, a)
 
     def do_push(self, arg):
         # Push a new todo on the end
@@ -165,6 +173,9 @@ Usage: move <old position> <new position>
     def do_save(self, arg):
         with open(self.savefile, 'w+b') as fp:
             pickle.dump(self.things, fp)
+
+    def do_load(self, arg):
+        self.load()
 
     def load(self):
         try:
