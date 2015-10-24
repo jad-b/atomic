@@ -35,7 +35,11 @@ class QuitException(Exception):
 
 class Valence(cmd.Cmd):
     savefile = 'valence.db'
-    intro = 'Hello, ' + _user
+    intro = textwrap.dedent("""
+1) Apply limitations.
+2) Choose the essential.
+
+Hello, {user}.""".format(user=_user))
     prompt = '(valence)> '
 
     def __init__(self):
