@@ -1,4 +1,7 @@
 import sys
+import subprocess
+import tempfile
+import textwrap
 
 QUESTIONS = {
     'power_of_less': (
@@ -18,6 +21,20 @@ def conduct_survey(questions, answers):
     q_a = []
     for q, a in zip(questions, answers):
         print(q)
-        sys.stdout.write(a)
-        q_a.append((q, input()))
+        # Open an editor if text is present, else just read from stdin
+        answer = vim_edit(q, a) if a else input()
+        q_a.append((q, answer))
     return q_a
+
+
+def vim_edit(question, text):
+    with tempfile.NamedTemporaryFile('w+') as fp:
+        # Print question and blank line
+        fp.write(textwrap.dedent('''> {}
+
+        {}'''.format(question, text)))
+        # Reset to start of file
+        fp.seek(0)
+        subprocess.call(['vim', fp.name])
+        return '\n'.join([line for line in fp if line.strip() and not
+            line.startswith('>')])
