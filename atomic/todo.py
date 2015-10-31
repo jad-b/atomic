@@ -4,6 +4,7 @@ todo
 
 Everyone's got stuff to do.
 """
+import json
 from datetime import datetime, date, time, timedelta
 
 import pytimeparse
@@ -16,6 +17,7 @@ timestamp_formats = (
     "%Y %b %d",         # 2015 Oct 16
     "%Y %b %d %H:%M",   # 2015 Oct 16 08:52
 )
+
 
 class Todo:
 
@@ -35,9 +37,19 @@ class Todo:
         self.tags = ()
 
     def __repr__(self):
-        return "{due} {name}: {desc}".format(name=self.name, due=self.due, desc=self.desc)
+        return "{due} {name}: {desc}".format(name=self.name, due=self.due,
+                                             desc=self.desc)
+
     def __str__(self):
         return "{name}".format(name=self.name)
+
+    def to_dict(self):
+        return self.__dict__
+
+    def to_json(self):
+        data = dict(self.__dict__)
+        data['timelog'] = str(self.timelog)
+        return json.dumps(data)
 
     @classmethod
     def parse(cls, line, delim=';'):
@@ -47,13 +59,12 @@ class Todo:
         Defaults to splitting on semi-colons.
 
         Accepted formats:
-            <name>; <desc>; <due>; <ignored...>
+            <name>; <desc>; <tags>...; <due>; <ignored...>
         """
         parts = line.split(delim)
-        identity_fn = lambda x: x
         parse_fns = (
-                identity_fn,
-                identity_fn,
+                identity,
+                identity,
                 parse_tags,
                 parse_datetime
         )
@@ -74,6 +85,9 @@ def log(orig, delta):
     return orig + delta
 
 
+def identity(x):
+    return x
+
 
 def parse_datetime(line, formats=timestamp_formats):
     """Parses a timestamp from a string from a list of acceptable formats."""
@@ -87,13 +101,16 @@ def parse_datetime(line, formats=timestamp_formats):
         if err:
             raise ve
 
+
 def starting_date():
     # Use current year/month/day, and zero values for hours/min/ms
     return datetime.combine(date.today(), time())
 
+
 def smart_date(dt):
     """Combine the parsed date/time/datetime with the current date to allow for
     shorthand date entry."""
+
 
 def parse_tags(line):
     """Parse a csv tag string."""

@@ -2,19 +2,19 @@
 import cmd
 import os
 import itertools
-import pickle
+import json
 import re
 import sys
 import traceback
 import textwrap
-from pprint import pprint
-from datetime import timedelta
 from importlib import reload
+
+import networkx as nx
+from networkx.readwrite import json_graph
 
 from atomic.todo import Todo, log
 from atomic import survey
 
-import pytimeparse
 
 _user = os.getenv('USER', 'user')
 
@@ -27,6 +27,7 @@ class QuitException(Exception):
 
     def __init__(self, message):
         super().__init__(message)
+        self.graph = None
         self.message = message
 
     def __str__(self):
@@ -34,17 +35,20 @@ class QuitException(Exception):
 
 
 class Valence(cmd.Cmd):
-    savefile = 'valence.db'
+    savefile = 'valence.pickle'
     intro = textwrap.dedent("""
 1) Apply limitations.
 2) Choose the essential.
+3) Simplify by eliminating the nonessential.
+4) Focus is effectiveness.
+5) Habits create long-term improvement.
 
 Hello, {user}.""".format(user=_user))
     prompt = '(valence)> '
 
     def __init__(self):
         super().__init__()
-        self.things = self.load()
+        self.load()
 
     def cmdloop(self, intro=None):
         while True:
@@ -52,28 +56,29 @@ Hello, {user}.""".format(user=_user))
                 super().cmdloop()
             except (ReloadException, QuitException):
                 raise
-            except Exception as e:     # Don't die on exceptions, only user quits (^-c)
+            except Exception:     # Don't die on exceptions, only (^-c)
                 traceback.print_exception(*sys.exc_info())
 
     def do_hi(self, arg):
         print("Hi to you too.")
 
     def do_goodnight(self, arg):
-        raise QuitException(textwrap.dedent("""
+        raise QuitException(textwrap.dedent("""\
             Good night, good night!
-            Parting is such sweet sorrow, that I shall say good night till it be morrow.
-            """))
+            Parting is such sweet sorrow,
+            that I shall say good night
+            till it be morrow."""))
 
     def do_list(self, arg):
         if arg == "":
-            pprint_items(self.things)
+            pprint_items(self.graph)
         else:
             # Filter on given keys
             keys = set(arg.split())
             print("Filtering on {}".format(keys))
             view = []
-            for thing in self.things:
-                view.append({k:v for k, v in thing.items() if k in keys})
+            for node in self.graph:
+                view.append({k: v for k, v in node.items() if k in keys})
             pprint_items(view)
 
     def do_ls(self, arg):
@@ -89,54 +94,52 @@ Hello, {user}.""".format(user=_user))
             self.do_ls("name")
             return
         idx = int(arg)
-        thing = self.things[idx]
-        if 'eval' in thing:
+        node = self.graph[idx]
+        if 'eval' in node:
             # Re-use saved questions and previous answers
-             q, a = zip(*thing['eval'])
+            q, a = zip(*node['eval'])
         else:
             q, a = (survey.QUESTIONS['power_of_less'] +
-                survey.QUESTIONS['one_to_ten']), itertools.repeat('')
-        thing['eval'] = survey.conduct_survey(q, a)
+                    survey.QUESTIONS['one_to_ten']), itertools.repeat('')
+        node['eval'] = survey.conduct_survey(q, a)
 
     def do_push(self, arg):
         # Push a new todo on the end
-        self.things.append(Todo.parse(arg))
+        self.graph.add_node(self.graph.number_of_nodes() + 1,
+                            Todo.parse(arg).to_dict())
 
     def do_pop(self, arg):
-        if len(self.things) == 0:
-            print('There is nothing to pop')
+        if len(self.graph) == 0:
+            print('There is nonode to pop')
         elif len(arg) > 0:
             try:
-                print(self.things.pop(int(arg)))
+                print(self.graph.remove_node(int(arg)))
             except ValueError:
                 print("'{}' is an invalid index".format(arg))
         else:
-            print(self.things.pop())
+            print("Please give the node name")
 
     def do_set(self, arg):
         idx, key, val = arg.split(maxsplit=2)
-        thing = self.things[int(idx)]
-        curr = thing.get(key, False)
+        node = self.graph[int(idx)]
+        curr = node.get(key, False)
         if curr and not isinstance(curr, str):
             orig = type(curr)
             print("Trying to save value as {}".format(str(orig)))
-            thing[key] = orig(val)
+            node[key] = orig(val)
         else:
-            thing[key] = val
-
-    def get(self, idx):
-        return self.things[idx]
+            node[key] = val
 
     def do_clear(self, arg):
         if input_bool():
-            self.things.clear()
+            self.graph.clear()
 
     def do_done(self, arg):
         idx, delta = arg.split()
         # Update with logged time and 'complete' status
-        item = self.get(int(idx))
-        item['log'] = todo.log(item['log'], delta)
-        item['tags'] +=('complete',)
+        item = self.graph[int(idx)]
+        item['log'] = log(item['log'], delta)
+        item['tags'] += ('complete',)
 
     def do_tag(self, arg):
         # 3 cat dog
@@ -145,16 +148,16 @@ Hello, {user}.""".format(user=_user))
         m = re.match(r'^(?P<idx>\d+)\s+(?P<tags>.+)$', arg)
         idx = int(m.groupdict()['idx'])
         tags = m.groupdict()['tags'].split()
-        thing = self.things[idx]
-        if thing.get('tags', False):   # Retieve existing tag list
-            thing.extend(tags)
+        node = self.graph[idx]
+        if node.get('tags', False):   # Retieve existing tag list
+            node.extend(tags)
         else:                               # Attach new tag list
-            thing['tags']  = tags
+            node['tags'] = tags
 
     def do_tags(self, arg):
         """Show all objects with insersection of ``tags``."""
         tags = arg.split()
-        intersect = {x for x in self.things if set(tags).issubset(set(x.tags))}
+        intersect = {x for x in self.graph if set(tags).issubset(set(x.tags))}
         pprint_items(intersect)
 
     def do_move(self, arg):
@@ -165,29 +168,29 @@ Hello, {user}.""".format(user=_user))
 
 Usage: move <old position> <new position>
 """.format(arg))
-        if old >= len(self.things):
+        if old >= len(self.graph):
             print('{} is out of range'.format(old))
             return
         if old < new:   # Subtract one for temporary decrement
             new -= 1
-        self.things.insert(new, self.things.pop(old))
+        self.graph.insert(new, self.graph.pop(old))
         # Re-print the list
         self.do_list()
 
     def do_save(self, arg):
-        with open(self.savefile, 'w+b') as fp:
-            pickle.dump(self.things, fp)
+        nx.write_gpickle(self.graph, self.savefile)
 
     def do_load(self, arg):
         self.load()
 
     def load(self):
         try:
-            with open(self.savefile, 'r+b') as fp:
-                return pickle.load(fp)
+            self.graph = nx.read_gpickle(self.savefile)
         except (FileNotFoundError,  # Obvious.
+                json.decoder.JSONDecodeError,   # Bad JSON
                 EOFError):          # Empty file
-            return []
+            print("trouble unpickling graph")
+            self.graph = nx.MultiGraph()
 
     def postcmd(self, stop, line):
         self.do_save(line)
@@ -196,12 +199,13 @@ Usage: move <old position> <new position>
         raise ReloadException("Code reload requested by user")
 
     def do_active(self, arg):
-        for i, thing in self.active:
-            print('{}) {}'.format(i, thing))
+        for i, node in self.active:
+            print('{}) {}'.format(i, node))
 
     @property
     def active(self):
-        return ((i, x) for i, x in enumerate(self.things) if 'complete' not in x.tags)
+        return ((i, x) for i, x in enumerate(self.graph)
+                if 'complete' not in x.get('tags', []))
 
 
 def input_bool(msg='Are you sure?', truths=('y', 'yes')):
@@ -209,14 +213,14 @@ def input_bool(msg='Are you sure?', truths=('y', 'yes')):
     return b in truths
 
 
-def pprint_items(things):
-    for i, thing in enumerate(things):
-        print('{})'.format(i))
-        print('\n'.join(pformat_dict(thing, '  ')))
+def pprint_items(graph):
+    for node, data in graph.nodes_iter(data=True):
+        print('{})'.format(node))
+        print('\n'.join(pformat_dict(data, '  ')))
 
 
-def pformat_dict(d, prefix=''):
-    for k, v in d.items():
+def pformat_dict(data, prefix=''):
+    for k, v in data.items():
         yield ("{}{}: {}".format(prefix, k, v))
 
 
@@ -252,9 +256,11 @@ def main():
             while True:
                 try:
                     curr_id = id(shell.Valence)
-                    print("Reloading Valence ({:d}) shell...".format(curr_id), end="")
+                    print("Reloading Valence ({:d}) shell...".format(curr_id),
+                          end="")
                     reload(shell)
-                    print("reload complete. Restarting Valence ({:d}).".format(curr_id))
+                    print("reload complete. "
+                          "Restarting Valence ({:d}).".format(curr_id))
                     curr_id = id(shell.Valence)
                     break
                 except:

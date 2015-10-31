@@ -4,7 +4,7 @@ import tempfile
 import textwrap
 
 QUESTIONS = {
-    'power_of_less': (
+    'determine_impact': (
         ('Will this have an impact that will last beyond this week or this '
         'month?'),
         'How will it change my job, my career, my life?',
@@ -13,7 +13,14 @@ QUESTIONS = {
     ),
     'one_to_ten': (
         'On a scale of one to ten, how important is this?',
-    )
+    ),
+    'choosing_the_essential': (
+        'What are your values?',
+        'What are your goals?',
+        'What do you love?',
+        'What is important to you?',
+        'What has the biggest impact?'
+    ),
 }
 
 
