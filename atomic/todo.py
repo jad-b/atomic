@@ -59,7 +59,7 @@ class Todo:
         Defaults to splitting on semi-colons.
 
         Accepted formats:
-            <name>; <desc>; <tags>...; <due>; <ignored...>
+            <name>; <desc>; [<tags>]; <due>[;<ignored>]
         """
         parts = line.split(delim)
         parse_fns = (

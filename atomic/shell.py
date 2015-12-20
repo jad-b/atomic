@@ -7,10 +7,10 @@ import re
 import sys
 import traceback
 import textwrap
+from collections import namedtuple
 from importlib import reload
 
 import networkx as nx
-from networkx.readwrite import json_graph
 
 from atomic.todo import Todo, log
 from atomic import survey
@@ -48,7 +48,16 @@ Hello, {user}.""".format(user=_user))
 
     def __init__(self):
         super().__init__()
+        self.graph = None
         self.load()
+        # Determine our nodes
+        self._serial = max(self.graph.nodes())
+
+    @property
+    def serial(self):
+        tmp = self._serial
+        self._serial += 1
+        return tmp
 
     def cmdloop(self, intro=None):
         while True:
@@ -70,23 +79,40 @@ Hello, {user}.""".format(user=_user))
             till it be morrow."""))
 
     def do_list(self, arg):
-        if arg == "":
-            pprint_items(self.graph)
+        if arg == "-a":
+            # Gather all nodes without parents
+            # Warning! This only works while "top-level" nodes are defined as
+            # "_not_ the target of _any_ edge", i.e., never a 'v' in (u, v).
+            gen = (x for x in self.graph if not self.graph.pred[x])
+            pprint_items(self.graph, gen)
+        elif arg == "":  #
+            for node_id, data in self.graph.nodes_iter(data=True):
+                if not self.graph.pred[node_id]:
+                    print("{id}) {name}".format(
+                        id=node_id, name=data.get('name'))
+                    )
         else:
             # Filter on given keys
             keys = set(arg.split())
             print("Filtering on {}".format(keys))
-            view = []
-            for node in self.graph:
-                view.append({k: v for k, v in node.items() if k in keys})
-            pprint_items(view)
+            for node_id, node_data in self.graph.nodes_iter(data=True):
+                pprint_node(node_id,
+                            {k: v for k, v in node_data.items() if k in keys})
 
     def do_ls(self, arg):
         """Alias for 'list'."""
         self.do_list(arg)
 
     def do_show(self, arg):
-        pprint_items([self.get(int(arg))])
+        """Display a single item.
+
+        Usage:
+            itemID
+        """
+        if arg == "":
+            print("You asked for nothing, and that's what you got.")
+            return
+        pprint_items([self.graph[int(arg)]])
 
     def do_eval(self, arg):
         if arg == "":
@@ -105,17 +131,17 @@ Hello, {user}.""".format(user=_user))
 
     def do_push(self, arg):
         # Push a new todo on the end
-        self.graph.add_node(self.graph.number_of_nodes() + 1,
-                            Todo.parse(arg).to_dict())
+        self.graph.add_node(self.serial, Todo.parse(arg).to_dict())
 
     def do_pop(self, arg):
         if len(self.graph) == 0:
-            print('There is nonode to pop')
+            print('There is no node to pop')
         elif len(arg) > 0:
-            try:
-                print(self.graph.remove_node(int(arg)))
-            except ValueError:
-                print("'{}' is an invalid index".format(arg))
+            for val in arg.split():
+                try:
+                    print(self.graph.remove_node(int(val)))
+                except ValueError:
+                    print("'{}' is an invalid index".format(val))
         else:
             print("Please give the node name")
 
@@ -140,6 +166,73 @@ Hello, {user}.""".format(user=_user))
         item = self.graph[int(idx)]
         item['log'] = log(item['log'], delta)
         item['tags'] += ('complete',)
+
+    def do_link(self, arg):
+        """Create a connection between two entries.
+
+        Usage:
+            <src> <dest> [<key1> <val1>]...
+        """
+        u, v, *rem = arg.split()
+        u, v = int(u), int(v)  # Retrieve node indices
+        # Parse remaining args as "key value..." repeating
+        # Group remaining args into 2-tuple
+        n = 2
+        d = dict((tuple(rem[i:i+n]) for i in range(0, len(rem), n)))
+        self.graph.add_edge(u, v, attr_dict=d)
+
+    def do_split(self, arg):
+        """Create a child node off of an existing node.
+
+        Usage:
+            <parent> <child> [<key> <value>]...
+        """
+        u, v, *rem = arg.split()
+        u, v = int(u), int(v)
+        # Split remaining words into key: value
+        d = dict((tuple(rem[i:i+2])) for i in range(0, len(rem), 2))
+        # Ensure we note the parent-child relationship
+        d['parent'] = True
+        self.graph.add_edge(u, v, attr_dict=d)
+
+    def do_birth(self, arg):
+        self.do_split(self, arg)
+
+    def do_begat(self, arg):
+        self.do_split(self, arg)
+
+    def do_adopt(self, arg):
+        """Relate a child to a parent.
+
+        Usage:
+            <parent> [<child>]
+        """
+        parent, *children = arg.split()
+        parent = int(parent)
+        for child in children:
+            self.graph.add_edge(parent, int(child), attr_dict={'parent': True})
+
+    def do_lineage(self, arg):
+        """Print children of an item.
+
+        Usage:
+            <parent>
+        """
+        indent = "  "
+        parent = int(arg)
+        FamilyDepth = namedtuple('FamilyDepth', ['id', 'depth'])
+        q = [FamilyDepth(parent, 0)]
+        while len(q):
+            curr = q.pop()
+            print("{indent}{id}) {name}".format(
+                indent=indent*curr.depth,
+                id=curr.id,
+                name=self.graph.node[curr.id]['name'])
+            )
+            for succ in self.graph.successors(curr.id)[::-1]:
+                # Check for a parent-child relationship
+                if self.graph.edge[curr.id][succ].get('parent'):
+                    q.append(FamilyDepth(succ, curr.depth+1))
 
     def do_tag(self, arg):
         # 3 cat dog
@@ -190,7 +283,7 @@ Usage: move <old position> <new position>
                 json.decoder.JSONDecodeError,   # Bad JSON
                 EOFError):          # Empty file
             print("trouble unpickling graph")
-            self.graph = nx.MultiGraph()
+            self.graph = nx.DiGraph()
 
     def postcmd(self, stop, line):
         self.do_save(line)
@@ -213,10 +306,15 @@ def input_bool(msg='Are you sure?', truths=('y', 'yes')):
     return b in truths
 
 
-def pprint_items(graph):
-    for node, data in graph.nodes_iter(data=True):
-        print('{})'.format(node))
-        print('\n'.join(pformat_dict(data, '  ')))
+def pprint_items(graph, nodes):
+    if graph:
+        for node in nodes:
+            pprint_node(node, graph.node[node])
+
+
+def pprint_node(id, data):
+    print('{})'.format(id))
+    print('\n'.join(pformat_dict(data)))
 
 
 def pformat_dict(data, prefix=''):
