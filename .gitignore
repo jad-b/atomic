@@ -1,5 +1,6 @@
 # Valence
 valence.db
+valence.pickle
 # Pyenv
 .python-version
 
