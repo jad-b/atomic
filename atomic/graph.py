@@ -13,7 +13,7 @@ from collections import namedtuple
 NodeDepth = namedtuple('NodeDepth', ['id', 'depth'])
 
 
-def broad_dfs(g, depth=False):
+def broad_dfs(g, depth=True):
     """Perform a depth-first search across all nodes, always beginning with
     nodes without predecessors.
 
@@ -23,7 +23,7 @@ def broad_dfs(g, depth=False):
     return itertools.chain.from_iterable((dfs(g, n, depth) for n in roots))
 
 
-def dfs(g, n, depth=False):
+def dfs(g, n, depth=True):
     """Typical dfs, with customization provided through boolean options"""
     q = [NodeDepth(n, 0)]
     while q:
@@ -31,4 +31,7 @@ def dfs(g, n, depth=False):
         children = list(g.succ[u.id])  # dict => list
         if children:
             q.extend((NodeDepth(c, u.depth+1) for c in children[::-1]))
-        yield u
+        if depth:
+            yield u
+        else:
+            yield u.id

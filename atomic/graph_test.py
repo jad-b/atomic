@@ -43,6 +43,9 @@ class TestGraphOperations(unittest.TestCase):
             graph.NodeDepth(5, 0),
             graph.NodeDepth(6, 1)
         ]
-        dfs_results = graph.broad_dfs(self.graph, depth=True)
-        print("Depth results returned")
-        self.assertEqual(list(dfs_results), expected)
+        dfs_results = list(graph.broad_dfs(self.graph, depth=True))
+        # Assert depth was included
+        self.assertEqual(dfs_results, expected)
+        # Assert depth can be excluded
+        no_depth_results = list(graph.broad_dfs(self.graph, depth=False))
+        self.assertEqual(no_depth_results, [n.id for n in expected])
