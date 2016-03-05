@@ -37,9 +37,16 @@ def dfs(g, n, depth=True):
             yield u.id
 
 
-def filter(g, *keys):
-    """Filter nodes based on attributes."""
-    pass
+def filter(g, *args, **kwargs):
+    """Filter nodes based on attributes.
+
+    :arg ``newworkx.Graph`` g: Graph to operate upon.
+    :arg ``Iterable`` args: List of attributes to return.
+    :arg ``dict`` kwargs: Values to filter against. Presence of an attribute can
+        be request by setting 'key=None', while non-None values will look for
+        exact matches.
+    """
+    raise NotImplementedError()
 
 
 def toplevel(g):

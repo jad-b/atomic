@@ -1,6 +1,6 @@
 import subprocess
 import os
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def readme():
@@ -13,6 +13,7 @@ def requirements(reqs_file):
         with open(reqs_file) as reqs:
             return [line.strip() for line in reqs
                     if line and not line.startswith('#')]
+
 
 def latest_git_tag():
     try:
@@ -41,6 +42,7 @@ setup(
     entry_points={
         'console_scripts': [
             'valence=atomic.shell:main',
+            'todo=atomic.cli:main'
         ]
     },
     zip_safe=False,

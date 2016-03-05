@@ -2,7 +2,7 @@
 todo
 ====
 
-Everyone's got stuff to do.
+Everyone's busy. Be busy better.
 """
 import json
 from datetime import datetime, date, time, timedelta

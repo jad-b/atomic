@@ -1,8 +1,9 @@
 import unittest
 
-from todo import Todo
+from todo import Todo, todo_parser, starting_date
 
-class TestTodoParsing(unittest.TestCase):
+
+class TestParsing(unittest.TestCase):
 
     def test_name_parsing(self):
         test_inputs = (
@@ -16,9 +17,7 @@ class TestTodoParsing(unittest.TestCase):
                 exp = [x for x in i.split(';') if x][0]
                 self.assertEqual(t.name == exp)
 
-class TestDatetimeParsing(unittest.TestCase):
-
-    def test_parsing(self):
+    def test_parsing_due_dates(self):
         # Get current local time
         today = starting_date()
         dt_inputs = (
@@ -32,6 +31,8 @@ class TestDatetimeParsing(unittest.TestCase):
         )
 
 
-if __name__ == '__main__':
-    unittest.main()
-
+def test_cli_add(self):
+    test_args = ('add', '-n', 'Test TODO')
+    parser = todo_parser()
+    args = parser.parse_args(test_args)
+    assert args.name == 'Test TODO'

@@ -6,14 +6,13 @@ import json
 import re
 import sys
 import traceback
-import textwrap
 from collections import namedtuple
 from importlib import reload
 
 import networkx as nx
 
 from atomic.todo import Todo, log
-from atomic import survey
+from atomic import survey, messages, graphops
 
 
 _user = os.getenv('USER', 'user')
@@ -35,22 +34,24 @@ class QuitException(Exception):
 
 
 class Valence(cmd.Cmd):
-    savefile = 'valence.pickle'
-    intro = textwrap.dedent("""
-1) Apply limitations.
-2) Choose the essential.
-3) Simplify by eliminating the nonessential.
-4) Focus is effectiveness.
-5) Habits create long-term improvement.
+    """Valence is the command-line shell a user interacts with. It is composed
+    of:
 
-Hello, {user}.""".format(user=_user))
+        1. A graph
+        2. A backing datastore
+        3. An auto-incrementing number generator
+        4. The cmd.Cmd REPL shell
+    """
+    savefile = 'valence.pickle'
+    intro = messages.INTRO.format(user=_user)
     prompt = '(valence)> '
 
     def __init__(self):
         super().__init__()
+        #: The graph of data
         self.graph = None
         self.load()
-        # Determine our nodes
+        #: The auto-incrementing number generator
         self._serial = max(self.graph.nodes())
 
     @property
@@ -69,35 +70,29 @@ Hello, {user}.""".format(user=_user))
                 traceback.print_exception(*sys.exc_info())
 
     def do_hi(self, arg):
-        print("Hi to you too.")
+        """Return a greeting."""
+        print(messages.HI)
 
     def do_goodnight(self, arg):
-        raise QuitException(textwrap.dedent("""\
-            Good night, good night!
-            Parting is such sweet sorrow,
-            that I shall say good night
-            till it be morrow."""))
+        """Exit Valence with a parting quote."""
+        raise QuitException(messages.SWEET_PRINCE)
 
     def do_list(self, arg):
-        if arg == "-a":
-            # Gather all nodes without parents
-            # Warning! This only works while "top-level" nodes are defined as
-            # "_not_ the target of _any_ edge", i.e., never a 'v' in (u, v).
-            gen = (x for x in self.graph if not self.graph.pred[x])
-            pprint_items(self.graph, gen)
-        elif arg == "":  #
+        if arg == "-a":  # Print all nodes
+            pprint_items(self.graph, graphops.toplevel(self.graph))
+        elif arg == "":  # No keys given; only print name
+            graphops.filter(self.graph, 'name')
             for node_id, data in self.graph.nodes_iter(data=True):
-                if not self.graph.pred[node_id]:
+                if graphops.is_toplevel(self.graph, node_id):
                     print("{id}) {name}".format(
                         id=node_id, name=data.get('name'))
                     )
-        else:
-            # Filter on given keys
+        else:  # Filter on given keys
             keys = set(arg.split())
             print("Filtering on {}".format(keys))
             for node_id, node_data in self.graph.nodes_iter(data=True):
-                pprint_node(node_id,
-                            {k: v for k, v in node_data.items() if k in keys})
+                keyed = {k: v for k, v in node_data.items() if k in keys}
+                pprint_node(node_id, keyed)
 
     def do_ls(self, arg):
         """Alias for 'list'."""
@@ -112,7 +107,7 @@ Hello, {user}.""".format(user=_user))
         if arg == "":
             print("You asked for nothing, and that's what you got.")
             return
-        pprint_items([self.graph[int(arg)]])
+        pprint_items(self.graph, [int(arg)])
 
     def do_eval(self, arg):
         if arg == "":
@@ -132,6 +127,9 @@ Hello, {user}.""".format(user=_user))
     def do_push(self, arg):
         # Push a new todo on the end
         self.graph.add_node(self.serial, Todo.parse(arg).to_dict())
+
+    def do_add(self, arg):
+        self.do_push(arg)
 
     def do_pop(self, arg):
         if len(self.graph) == 0:
@@ -187,19 +185,21 @@ Hello, {user}.""".format(user=_user))
         Usage:
             <parent> <child> [<key> <value>]...
         """
-        u, v, *rem = arg.split()
-        u, v = int(u), int(v)
-        # Split remaining words into key: value
-        d = dict((tuple(rem[i:i+2])) for i in range(0, len(rem), 2))
+        u, rem = arg.split(maxsplit=1)
+        u, entry = int(u), Todo.parse(rem).to_dict()
+        child_id = self.serial
+        # Create a new child node
+        self.graph.add_node(child_id, entry)
         # Ensure we note the parent-child relationship
-        d['parent'] = True
-        self.graph.add_edge(u, v, attr_dict=d)
+        self.graph.add_edge(u, child_id, parent=True)
+        print("Linked {parent:d} to {child:d}".format(
+            parent=u, child=child_id))
 
     def do_birth(self, arg):
-        self.do_split(self, arg)
+        self.do_split(arg)
 
     def do_begat(self, arg):
-        self.do_split(self, arg)
+        self.do_split(arg)
 
     def do_adopt(self, arg):
         """Relate a child to a parent.
@@ -307,9 +307,8 @@ def input_bool(msg='Are you sure?', truths=('y', 'yes')):
 
 
 def pprint_items(graph, nodes):
-    if graph:
-        for node in nodes:
-            pprint_node(node, graph.node[node])
+    for node in nodes:
+        pprint_node(node, graph.node[node])
 
 
 def pprint_node(id, data):
