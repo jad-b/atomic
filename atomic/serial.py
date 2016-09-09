@@ -15,8 +15,19 @@ class Serial:
 
     @property
     def index(self):
+        curr = self._index
         self._index += 1
-        return self._index
+        return curr
 
-    def next(self):
+    def __next__(self):
         return self.index
+
+    def __iter__(self):
+        return self
+
+    def to_json(self):
+        return {'index': self._index}
+
+    @classmethod
+    def from_json(cls, json_object):
+        return cls(**json_object)

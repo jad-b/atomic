@@ -1,3 +1,13 @@
+# todo
+
+* [ ] Refactor Shell (Valence) to use an API layer
+* [ ] Extend Valence through the use of mixins
+    * [ ] ReloadMixin
+    * [ ] NodeMixin
+* [x] Trim unneeded Graph work
+
+
+### Old
 * [ ] Save|Load TODOs to|from file
 * [ ] List TODO's
     * [ ] Show all TODOs in hierarchy

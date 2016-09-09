@@ -1,4 +1,3 @@
-import sys
 import subprocess
 import tempfile
 import textwrap
@@ -6,7 +5,7 @@ import textwrap
 QUESTIONS = {
     'determine_impact': (
         ('Will this have an impact that will last beyond this week or this '
-        'month?'),
+         'month?'),
         'How will it change my job, my career, my life?',
         'How will this further a long-term goal of mine?',
         'How important is that goal?',
@@ -44,4 +43,4 @@ def vim_edit(question, text):
         fp.seek(0)
         subprocess.call(['vim', fp.name])
         return '\n'.join([line for line in fp if line.strip() and not
-            line.startswith('>')])
+                         line.startswith('>')])

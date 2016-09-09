@@ -5,7 +5,7 @@ todo
 Everyone's busy. Be busy better.
 """
 import json
-from datetime import datetime, date, time, timedelta
+from datetime import timedelta
 
 import pytimeparse
 
@@ -66,7 +66,6 @@ class Todo:
                 identity,
                 identity,
                 parse_tags,
-                parse_datetime
         )
 
         # Map parsing functions against arguments
@@ -87,29 +86,6 @@ def log(orig, delta):
 
 def identity(x):
     return x
-
-
-def parse_datetime(line, formats=timestamp_formats):
-    """Parses a timestamp from a string from a list of acceptable formats."""
-    err = None
-    for fmt in formats:
-        try:
-            return datetime.strptime(line, fmt)
-        except ValueError as ve:
-            err = ve
-    else:
-        if err:
-            raise ve
-
-
-def starting_date():
-    # Use current year/month/day, and zero values for hours/min/ms
-    return datetime.combine(date.today(), time())
-
-
-def smart_date(dt):
-    """Combine the parsed date/time/datetime with the current date to allow for
-    shorthand date entry."""
 
 
 def parse_tags(line):
