@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-fileapi
+API implementation for using a local file as the data store.
 """
 from io import StringIO
 

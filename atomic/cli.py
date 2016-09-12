@@ -7,9 +7,12 @@ Command line interface.
 """
 import argparse
 
+from atomic import shell, fileapi
 
-def add_arguments(parser, q):
-    parser.add_argument('-l', '--list', help='List your Todos',
+
+def add_arguments(parser, api):
+    parser.add_argument('-l', '--list',
+                        help='List your thoughts, actions, objects.',
                         action='store_true')
 
     # Sub-commands
@@ -23,8 +26,8 @@ def add_arguments(parser, q):
 
     def add_func(args):
         title_str = ' '.join(args.title)
-        q.add(parent=args.parent, name=title_str, body=args.body)
-        # q.binary_add(todo)  # Guide them through insertion
+        api.add(parent=args.parent, name=title_str, body=args.body)
+        # api.binary_add(args)  # Guide them through insertion
     p_add.set_defaults(func=add_func)
 
     # Update
@@ -36,35 +39,27 @@ def add_arguments(parser, q):
 
     def update_func(args):
         title_str = ' '.join(args.title)
-        q.update(args.index, title=title_str, body=args.body)
+        api.update(args.index, title=title_str, body=args.body)
     p_update.set_defaults(func=update_func)
 
     # Delete
-    p_delete = subs.add_parser('delete', help='Delete Todo help',
+    p_delete = subs.add_parser('delete', help='Delete help',
                                aliases=['d'])
     p_delete.add_argument('index', help='Index to remove', type=int)
 
     def delete_func(args):
-        q.delete(args.index)
+        api.delete(args.index)
     p_delete.set_defaults(func=delete_func)
-
-    # Shell
-    parser.add_argument('-s', '--shell', help='Run the Q shell',
-                        action='store_true')
 
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.set_defaults(func=None)
-    args = parser.parse_args()
-    q = None
-    add_arguments(parser, q)
+    parser.set_defaults(func=shell.main)
+    api = fileapi.FileAPI()
+    add_arguments(parser, api)
 
-    if args.func is not None:
-        try:
-            args.func(args)
-        finally:
-            q.save()
+    args = parser.parse_args()
+    args.func(args)
 
 
 if __name__ == '__main__':

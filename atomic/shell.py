@@ -138,7 +138,7 @@ class QuitException(Exception):
         return self.message
 
 
-def main():
+def main(*args, **kwargs):
     """Run the Valence command-line shell.
 
     If an error is encountered during initialization, the user is given the
@@ -172,7 +172,3 @@ def main():
         except QuitException as qe:
             print(qe)
             break
-
-
-if __name__ == '__main__':
-    main()

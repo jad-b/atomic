@@ -6,6 +6,7 @@ graph
 import enum
 import json
 
+import networkx as nx
 from networkx.readwrite import json_graph
 
 
@@ -18,9 +19,13 @@ RELATED = "related_to"
 
 def load(filename=DEFAULT_FILENAME):
     """Load the persisted :class:`networkx.MultiDiGraph`."""
-    with open(filename) as f:
-        data = json.load(f)
-        return json_graph.node_link_graph(data, directed=True, multigraph=True)
+    try:
+        with open(filename) as f:
+            data = json.load(f)
+            return json_graph.node_link_graph(data, directed=True,
+                                              multigraph=True)
+    except FileNotFoundError:
+        return nx.MultiDiGraph()
 
 
 def save(G, filename=DEFAULT_FILENAME):
@@ -127,6 +132,7 @@ func vis(t tree) {
     f(0, "")
 }
 """
+
 
 class TreeParts(enum.Enum):
     parent = '┐'
