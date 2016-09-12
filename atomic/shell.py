@@ -5,7 +5,7 @@ import sys
 import traceback
 from importlib import reload
 
-from atomic import messages, log
+from atomic import messages, log, display
 from atomic.fileapi import FileAPI
 
 
@@ -47,7 +47,7 @@ class Valence(cmd.Cmd):
         self.do_help('')
 
     def postcmd(self, stop, line):
-        self.do_save(line)
+        pass
 
     def precmd(self, line):
         """Record all cmd interactions."""
@@ -55,7 +55,7 @@ class Valence(cmd.Cmd):
         return line
 
     def do_list(self, arg):
-        pass
+        display.print_nodes(self.api.list())
 
     def do_show(self, arg):
         """Display a single item.

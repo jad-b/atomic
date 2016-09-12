@@ -7,7 +7,7 @@ Command line interface.
 """
 import argparse
 
-from atomic import shell, fileapi, log
+from atomic import shell, fileapi, log, display
 
 logger = log.get_logger('cli')
 
@@ -23,12 +23,7 @@ def add_arguments(parser, api):
         logger.debug("Listing nodes")
         print("Nodes:\n=====")
         nodes = api.list()
-        n = 0
-        for n in nodes:
-            print(n)
-            n += 1
-        if n == 0:
-            print("No items found")
+        display.print_nodes(nodes)
     p_list.set_defaults(func=list_func)
 
     # Add
