@@ -7,16 +7,29 @@ Command line interface.
 """
 import argparse
 
-from atomic import shell, fileapi
+from atomic import shell, fileapi, log
+
+logger = log.get_logger('cli')
 
 
 def add_arguments(parser, api):
-    parser.add_argument('-l', '--list',
-                        help='List your thoughts, actions, objects.',
-                        action='store_true')
-
     # Sub-commands
     subs = parser.add_subparsers(help='sub-command help', dest='command')
+
+    # List/Get
+    p_list = subs.add_parser('list', help='List nodes', aliases=['ls'])
+
+    def list_func(args):
+        logger.debug("Listing nodes")
+        print("Nodes:\n=====")
+        nodes = api.list()
+        n = 0
+        for n in nodes:
+            print(n)
+            n += 1
+        if n == 0:
+            print("No items found")
+    p_list.set_defaults(func=list_func)
 
     # Add
     p_add = subs.add_parser('add', help='Add node', aliases=['a'])
@@ -59,6 +72,7 @@ def main():
     add_arguments(parser, api)
 
     args = parser.parse_args()
+    logger.debug("Arguments: %s", args.command)
     args.func(args)
 
 

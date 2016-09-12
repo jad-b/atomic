@@ -5,7 +5,7 @@ import sys
 import traceback
 from importlib import reload
 
-from atomic import messages
+from atomic import messages, log
 from atomic.fileapi import FileAPI
 
 
@@ -26,6 +26,7 @@ class Valence(cmd.Cmd):
     def __init__(self):
         super().__init__()
         self.api = FileAPI()
+        self.logger = log.get_logger('valence')
 
     def cmdloop(self, intro=None):
         """Run the REPL, handling special-case exceptions."""
@@ -117,9 +118,7 @@ def loop():
         print('Goodbye, ', _user)
         sys.exit(0)
     finally:
-        if v:
-            v.do_save(None)
-            print('Saving work')
+        pass
 
 
 class ReloadException(Exception):

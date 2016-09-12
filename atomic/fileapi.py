@@ -21,6 +21,10 @@ class FileAPI(api.APISpec):
         """Retrieve an item by index (uuid)."""
         return self.G.node[idx]
 
+    def list(self):
+        """Retrieve all items."""
+        return self.G.nodes_iter(data=True)
+
     def add(self, parent=None, **kwargs):
         idx = self.serial.index
         self.G.add_node(idx, attr_dict=kwargs)  # Create node
