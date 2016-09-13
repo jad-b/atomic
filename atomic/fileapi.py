@@ -6,7 +6,7 @@ from io import StringIO
 
 from colorama import Fore, Style
 
-from atomic import api, graph, serial
+from atomic import api, graph, serial, log
 
 
 class FileAPI(api.APISpec):
@@ -16,6 +16,7 @@ class FileAPI(api.APISpec):
         self.G = graph.load()
         # A project-unique ID generator
         self.serial = serial.Serial()
+        self.logger = log.get_logger('api')
 
     def get(self, idx):
         """Retrieve an item by index (uuid)."""
@@ -26,18 +27,23 @@ class FileAPI(api.APISpec):
         return self.G.nodes_iter(data=True)
 
     def add(self, parent=None, **kwargs):
+        self.logger.debug("Adding node")
         idx = self.serial.index
         self.G.add_node(idx, attr_dict=kwargs)  # Create node
         if parent is not None:
+            self.logger.debug("Linking to %s", parent)
             self.G.add_edge(parent, idx, parent_of=True)  # Link to parent
+        graph.save(self.G)
 
     def update(self, idx, **kwargs):
         """Update item attributes."""
         self.G.node[idx] = {**self.G.node[idx], **kwargs}
+        graph.save(self.G)
 
     def delete(self, uid):
         """Remove a node from the graph."""
         self.G.remove_node(uid)
+        graph.save(self.G)
 
     def binary_add(self, item):
         """Insert an item after using a binary-search comparison."""

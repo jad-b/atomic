@@ -39,7 +39,7 @@ class Valence(cmd.Cmd):
                 traceback.print_exception(*sys.exc_info())
 
     def do_EOF(self, args):
-        """Save the Q before quitting."""
+        """Save the graph before quitting."""
         raise KeyboardInterrupt
 
     def emptyline(self):
@@ -55,7 +55,12 @@ class Valence(cmd.Cmd):
         return line
 
     def do_list(self, arg):
+        """Display nodes in the system."""
         display.print_nodes(self.api.list())
+
+    def do_add(self, arg):
+        """Add a node."""
+        self.api.add(name=arg)
 
     def do_show(self, arg):
         """Display a single item.
@@ -83,6 +88,7 @@ class Valence(cmd.Cmd):
         self.graph.add_edge(u, v, attr_dict=d)
 
     def do_tag(self, arg):
+        """Add a tag to the node of given index."""
         # 3 cat dog
         # idx: 3
         # tags: (cat, dog)
@@ -100,6 +106,7 @@ class Valence(cmd.Cmd):
         raise QuitException(messages.SWEET_PRINCE)
 
     def do_reload(self, arg):
+        """Live reload the shell's source code."""
         raise ReloadException("Code reload requested by user")
 
 
@@ -115,7 +122,7 @@ def loop():
         v = Valence()
         v.cmdloop()
     except KeyboardInterrupt:
-        print('Goodbye, ', _user)
+        print('Goodbye,', _user)
         sys.exit(0)
     finally:
         pass

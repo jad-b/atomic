@@ -5,16 +5,21 @@ graph
 """
 import enum
 import json
+import os
 
 import networkx as nx
 from networkx.readwrite import json_graph
 
+from atomic import log
 
-DEFAULT_FILENAME = '~/atomic.json'
+
+DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')
 
 # Edge Types
 PARENT = "parent_of"
 RELATED = "related_to"
+
+logger = log.get_logger('graph')
 
 
 def load(filename=DEFAULT_FILENAME):
@@ -22,17 +27,20 @@ def load(filename=DEFAULT_FILENAME):
     try:
         with open(filename) as f:
             data = json.load(f)
+            logger.debug("Loaded %s", filename)
             return json_graph.node_link_graph(data, directed=True,
                                               multigraph=True)
     except FileNotFoundError:
+        logger.debug("No graph file found; instantiating")
         return nx.MultiDiGraph()
 
 
 def save(G, filename=DEFAULT_FILENAME):
     """Save the persisted :class:`networkx.MultiDiGraph`."""
-    with open(filename) as f:
+    with open(filename, 'w') as f:
         data = json_graph.node_link_data(G)
         json.dump(data, f, indent=2)
+    logger.debug("Saved graph")
 
 
 def toplevel(g):

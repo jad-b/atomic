@@ -36,6 +36,11 @@ LOGGING = {
             'propagate': False,
             'level': 'DEBUG'
         },
+        'graph': {
+            'handlers': ['console'],
+            'propagate': False,
+            'level': 'DEBUG'
+        },
     }
 }
 
