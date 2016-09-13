@@ -60,7 +60,12 @@ class Valence(cmd.Cmd):
 
     def do_add(self, arg):
         """Add a node."""
-        self.api.add(name=arg)
+        self.api.add(title=arg)
+
+    def do_update(self, arg):
+        """Update a node: <idx> <body arguments>"""
+        idx, args = arg.split(' ', 1)  # Split off the index
+        self.api.update(int(idx), body=args)
 
     def do_remove(self, arg):
         """Remove a node."""
