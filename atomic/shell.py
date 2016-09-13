@@ -62,6 +62,10 @@ class Valence(cmd.Cmd):
         """Add a node."""
         self.api.add(name=arg)
 
+    def do_remove(self, arg):
+        """Remove a node."""
+        self.api.delete(int(arg))
+
     def do_show(self, arg):
         """Display a single item.
 

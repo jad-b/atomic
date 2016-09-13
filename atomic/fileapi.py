@@ -27,8 +27,8 @@ class FileAPI(api.APISpec):
         return self.G.nodes_iter(data=True)
 
     def add(self, parent=None, **kwargs):
-        self.logger.debug("Adding node")
         idx = self.serial.index
+        self.logger.debug("Adding node %s", idx)
         self.G.add_node(idx, attr_dict=kwargs)  # Create node
         if parent is not None:
             self.logger.debug("Linking to %s", parent)
