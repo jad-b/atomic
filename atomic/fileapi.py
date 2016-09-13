@@ -5,6 +5,7 @@ API implementation for using a local file as the data store.
 from io import StringIO
 
 from colorama import Fore, Style
+import networkx as nx
 
 from atomic import api, graph, serial, log
 
@@ -13,10 +14,11 @@ class FileAPI(api.APISpec):
     """File-system backed implementation of the API."""
 
     def __init__(self):
-        self.G = graph.load()
-        # A project-unique ID generator
-        self.serial = serial.Serial()
         self.logger = log.get_logger('api')
+        self.G = graph.load()
+        serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 0 else 0
+        self.logger.debug("Initalizing serial to %d", serial_idx)
+        self.serial = serial.Serial(serial_idx)
 
     def get(self, idx):
         """Retrieve an item by index (uuid)."""
@@ -40,10 +42,13 @@ class FileAPI(api.APISpec):
         self.G.node[idx] = {**self.G.node[idx], **kwargs}
         graph.save(self.G)
 
-    def delete(self, uid):
+    def delete(self, idx):
         """Remove a node from the graph."""
-        self.G.remove_node(uid)
-        graph.save(self.G)
+        try:
+            self.G.remove_node(idx)
+            graph.save(self.G)
+        except nx.exception.NetworkXError:
+            return ValueError("{:d} wasn't found in the graph".format(idx))
 
     def binary_add(self, item):
         """Insert an item after using a binary-search comparison."""
@@ -85,6 +90,9 @@ class FileAPI(api.APISpec):
                       "Hit Ctrl-D to quit.")
                 ans = None
 
+    def save(self):
+        graph.save(self.G)
+
     def __str__(self):
         """Output the list of items."""
         if len(self.items) == 0:
@@ -100,6 +108,3 @@ class FileAPI(api.APISpec):
 
     def __iter__(self):
         return self.graph.nodes_iter()
-
-    def save(self):
-        graph.save(self.G)

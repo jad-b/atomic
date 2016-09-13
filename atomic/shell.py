@@ -60,7 +60,7 @@ class Valence(cmd.Cmd):
 
     def do_add(self, arg):
         """Add a node."""
-        self.api.add(title=arg)
+        self.api.add(name=arg)
 
     def do_update(self, arg):
         """Update a node: <idx> <body arguments>"""
@@ -69,7 +69,10 @@ class Valence(cmd.Cmd):
 
     def do_remove(self, arg):
         """Remove a node."""
-        self.api.delete(int(arg))
+        try:
+            self.api.delete(int(arg))
+        except ValueError:
+            print("{:d} not found".format(int(arg)))
 
     def do_show(self, arg):
         """Display a single item.
