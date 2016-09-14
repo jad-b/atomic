@@ -5,7 +5,7 @@ import sys
 import traceback
 from importlib import reload
 
-from atomic import messages, log, display
+from atomic import messages, log, display, parse
 from atomic.fileapi import FileAPI
 
 
@@ -74,6 +74,15 @@ class Valence(cmd.Cmd):
         except ValueError:
             print("{:d} not found".format(int(arg)))
 
+    def do_link(self, arg):
+        """Create a connection between two entries.
+
+        Usage:
+            <src> <dest> <type> [<key1>=<val1>]...
+        """
+        src, dest, type_, kwargs = parse.parse_link_args(arg)
+        self.api.link(src, dest, type_, **kwargs)
+
     def do_show(self, arg):
         """Display a single item.
 
@@ -84,20 +93,6 @@ class Valence(cmd.Cmd):
             print("You asked for nothing, and that's what you got.")
             return
         pass
-
-    def do_link(self, arg):
-        """Create a connection between two entries.
-
-        Usage:
-            <src> <dest> [<key1> <val1>]...
-        """
-        u, v, *rem = arg.split()
-        u, v = int(u), int(v)  # Retrieve node indices
-        # Parse remaining args as "key value..." repeating
-        # Group remaining args into 2-tuple
-        n = 2
-        d = dict((tuple(rem[i:i+n]) for i in range(0, len(rem), n)))
-        self.graph.add_edge(u, v, attr_dict=d)
 
     def do_tag(self, arg):
         """Add a tag to the node of given index."""

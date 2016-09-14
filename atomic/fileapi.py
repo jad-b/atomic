@@ -50,6 +50,11 @@ class FileAPI(api.APISpec):
         except nx.exception.NetworkXError:
             return ValueError("{:d} wasn't found in the graph".format(idx))
 
+    def link(self, src, dest, type, **kwargs):
+        """Link two nodes in the graph."""
+        self.G.add_edge(src, dest, type=type, **kwargs)
+        graph.save(self.G)
+
     def binary_add(self, item):
         """Insert an item after using a binary-search comparison."""
         lo, hi = 0, len(self.items) - 1

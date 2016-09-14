@@ -1,3 +1,4 @@
+import pytest
 import networkx as nx
 
 
@@ -13,12 +14,3 @@ def graph():
     ])
     print("Initialized graph")
     return sample_graph
-
-
-
-@pytest.mark.yield_fixture
-def api():
-
-
-def test_get(graph):
-

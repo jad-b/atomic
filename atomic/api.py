@@ -22,3 +22,8 @@ class APISpec(metaclass=ABCMeta):
     def delete(self, uid):
         """Delete a node from the graph."""
         pass
+
+    @abstractmethod
+    def link(self, src, dest, type, **kwargs):
+        """Link two nodes in the graph."""
+        pass

@@ -7,7 +7,7 @@ Command line interface.
 """
 import argparse
 
-from atomic import shell, fileapi, log, display
+from atomic import shell, fileapi, log, display, graph
 
 logger = log.get_logger('cli')
 
@@ -58,6 +58,18 @@ def add_arguments(parser, api):
     def delete_func(args):
         api.delete(args.index)
     p_delete.set_defaults(func=delete_func)
+
+    # Link
+    p_link = subs.add_parser('link', help='Link two nodes by type of relation',
+                             aliases='l')
+    p_link.add_argument('src', help='Starting node')
+    p_link.add_argument('dest', help='Destination node')
+    p_link.add_argument('type', help='Relationship type',
+                        choices=[graph.PARENT, graph.RELATED, graph.PRECEDES])
+
+    def link_func(args):
+        api.link(args.src, args.dest, type_=args.type)
+    p_link.set_defaults(func=link_func)
 
 
 def main():

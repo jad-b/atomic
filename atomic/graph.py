@@ -18,6 +18,7 @@ DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')
 # Edge Types
 PARENT = "parent_of"
 RELATED = "related_to"
+PRECEDES = "precedes"
 
 logger = log.get_logger('graph')
 

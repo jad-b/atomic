@@ -9,15 +9,6 @@ from datetime import timedelta
 
 import pytimeparse
 
-timestamp_formats = (
-    "%d",               # Day: 16
-    "%b %d",            # Month day: Oct 16
-    "%H:%M",            # Clock time: 14:02
-    "%I:%M %p",         # 12-hour clock time: 2:02 PM
-    "%Y %b %d",         # 2015 Oct 16
-    "%Y %b %d %H:%M",   # 2015 Oct 16 08:52
-)
-
 
 class Todo:
 
@@ -65,7 +56,7 @@ class Todo:
         parse_fns = (
                 identity,
                 identity,
-                parse_tags,
+                # parse_tags,
         )
 
         # Map parsing functions against arguments
@@ -86,8 +77,3 @@ def log(orig, delta):
 
 def identity(x):
     return x
-
-
-def parse_tags(line):
-    """Parse a csv tag string."""
-    return [x.strip() for x in line.split(',')]
