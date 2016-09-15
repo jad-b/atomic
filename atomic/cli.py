@@ -27,7 +27,8 @@ def add_arguments(parser, api):
     p_list.set_defaults(func=list_func)
 
     # Add
-    p_add = subs.add_parser('add', help='Add node', aliases=['a'])
+    p_add = subs.add_parser('add', help='Add a node to the graph',
+                            aliases=['a'])
     p_add.add_argument('name', nargs='+', help='name')
     p_add.add_argument('-p', '--parent', help='Parent node')
     p_add.add_argument('-b', '--body', help='Body')
@@ -39,7 +40,7 @@ def add_arguments(parser, api):
     p_add.set_defaults(func=add_func)
 
     # Update
-    p_update = subs.add_parser('update', help='Update help',
+    p_update = subs.add_parser('update', help='Update attributes of a node',
                                aliases=['u'])
     p_update.add_argument('index', help='Index of node to update', type=int)
     p_update.add_argument('-t', '--name', nargs='+', help='name')
@@ -51,7 +52,7 @@ def add_arguments(parser, api):
     p_update.set_defaults(func=update_func)
 
     # Delete
-    p_delete = subs.add_parser('delete', help='Delete help',
+    p_delete = subs.add_parser('delete', help='Delete a node from the graph',
                                aliases=['d'])
     p_delete.add_argument('index', help='Index to remove', type=int)
 

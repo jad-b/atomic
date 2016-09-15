@@ -30,10 +30,10 @@ def load(filename=DEFAULT_FILENAME):
             data = json.load(f)
             logger.debug("Loaded %s", filename)
             return json_graph.node_link_graph(data, directed=True,
-                                              multigraph=True)
+                                              multigraph=False)
     except FileNotFoundError:
         logger.debug("No graph file found; instantiating")
-        return nx.MultiDiGraph()
+        return nx.DiGraph()
 
 
 def save(G, filename=DEFAULT_FILENAME):
@@ -44,14 +44,16 @@ def save(G, filename=DEFAULT_FILENAME):
     logger.debug("Saved graph")
 
 
-def toplevel(g):
+def toplevel(G):
     """Return a list of top-level nodes; nodes without predecessors."""
-    return (n for n in g if is_toplevel(g, n))
+    return (n for n in G if not G.pred[n])
 
 
-def is_toplevel(g, n):
-    """Does this node have predecessors?"""
-    return not g.pred[n]
+def hierarchy(G, src=None):
+    """Produce child nodes in a depth-first order."""
+    for e in nx.dfs_edges(G, src=None):
+        if G.edge[e[0]][e[1]]['type'] == PARENT:
+            yield e[1]
 
 
 class Node:

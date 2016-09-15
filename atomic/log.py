@@ -18,7 +18,7 @@ LOGGING = {
     'loggers': {
         'atomic': {
             'handlers': ['console'],
-            'propagate': True,
+            'propagate': False,
             'level': 'DEBUG'
         },
         'valence': {

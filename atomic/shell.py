@@ -23,9 +23,9 @@ class Valence(cmd.Cmd):
     intro = "Hi."
     prompt = '(valence)> '
 
-    def __init__(self):
+    def __init__(self, api=None):
         super().__init__()
-        self.api = FileAPI()
+        self.api = api or FileAPI()
         self.logger = log.get_logger('valence')
 
     def cmdloop(self, intro=None):
