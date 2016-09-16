@@ -6,6 +6,7 @@ graph
 import enum
 import json
 import os
+from collections import deque
 
 import networkx as nx
 from networkx.readwrite import json_graph
@@ -51,9 +52,17 @@ def toplevel(G):
 
 def hierarchy(G, src=None):
     """Produce child nodes in a depth-first order."""
-    for e in nx.dfs_edges(G, src=None):
-        if G.edge[e[0]][e[1]]['type'] == PARENT:
-            yield e[1]
+    dq = deque()
+    for root in toplevel(G):
+        yield root, len(dq)  # Depth 0
+        # Iterate over all children
+        dq.append(root)
+        for src, dest in nx.dfs_edges(G, source=root):
+            while len(dq) > 0 and dq[-1] != src:
+                dq.pop()  # Unwind the stack
+            if G.edge[src][dest].get('type') == PARENT:
+                yield dest, len(dq)
+            dq.append(dest)
 
 
 class Node:
