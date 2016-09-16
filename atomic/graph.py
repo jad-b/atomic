@@ -3,7 +3,6 @@
 graph
 =====
 """
-import enum
 import json
 import os
 from collections import deque
@@ -50,7 +49,7 @@ def toplevel(G):
     return (n for n in G if not G.pred[n])
 
 
-def hierarchy(G, src=None):
+def hierarchy(G):
     """Produce child nodes in a depth-first order."""
     dq = deque()
     for root in toplevel(G):
@@ -129,10 +128,12 @@ class Action(Thought):
 
 """
 func vis(t tree) {
+    // Short-circuit on empty values
     if len(t) == 0 {
         fmt.Println("<empty>")
         return
     }
+    // Define a recursive function
     var f func(int, string)
     f = func(n int, pre string) {
         ch := t[n].children
@@ -152,11 +153,3 @@ func vis(t tree) {
     f(0, "")
 }
 """
-
-
-class TreeParts(enum.Enum):
-    parent = '┐'
-    leaf = '-'
-    child = '├─'
-    last_child = '└─'
-    bar = '|'

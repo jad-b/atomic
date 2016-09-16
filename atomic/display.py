@@ -1,6 +1,25 @@
 from io import StringIO
 
 
+last_child = '└─'
+descend = '├─── '
+backbone = '│   '
+
+
+def print_tree(nodes):
+    """Print a horizontal tree using a list of (node, depth) tuples."""
+    sio = StringIO()
+    for n, depth in nodes:
+        if depth == 0:
+            pre = ''
+        elif depth == 1:
+            pre = descend
+        else:
+            pre = backbone + ' ' * 4 * (depth - 2) + descend
+        sio.write(pre + n + '\n')
+    print(sio.getvalue().rstrip('\n'))
+
+
 def print_nodes(nodes):
     i = 0
     for idx, node in nodes:
