@@ -3,10 +3,28 @@ from collections import namedtuple
 from atomic import parse
 
 
+def test_time_parsing():
+        # Get current local time
+        # today = parse.starting_date()
+        dt_inputs = (
+            "14:02",
+            "2:02 pm",
+            "2015 Nov 16"
+            "14",
+            "Dec 14",
+            "2015 Dec 14",
+            "2015 Dec 14 14:02",
+        )
+        for testcase in dt_inputs:
+            parse.parse_datetime(testcase)
+
+
 def test_parse_key_values():
     TestData = namedtuple('TestData', ['input', 'out'])
     testcases = (
         TestData('', {}),
+        TestData('body=', {'body': ''}),
+        TestData('body= cats=two', {'body': '', 'cats': 'two'}),
         TestData("body=I don't know what to do with my hands",
                  {'body': "I don't know what to do with my hands"}),
         TestData("line1=I think line2=My fear's come true",

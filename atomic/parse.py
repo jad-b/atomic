@@ -65,3 +65,4 @@ def starting_date():
 def smart_date(dt):
     """Combine the parsed date/time/datetime with the current date to allow for
     shorthand date entry."""
+    pass

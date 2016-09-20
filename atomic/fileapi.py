@@ -10,7 +10,7 @@ import networkx as nx
 from atomic import api, graph, serial, log
 
 
-class FileAPI(api.APISpec):
+class FileAPI(api.NodeAPISpec, api.EdgeAPISpec):
     """File-system backed implementation of the API."""
 
     def __init__(self):

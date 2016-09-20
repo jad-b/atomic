@@ -17,34 +17,34 @@ def add_arguments(parser, api):
     subs = parser.add_subparsers(help='sub-command help', dest='command')
 
     # List/Get
-    p_list = subs.add_parser('list', help='List nodes', aliases=['ls'])
+    # atomic list
+    # atomic list key=value
+    # atomic list q=Lucene||Solr, haven't decided
+    p_list = subs.add_parser('list', help='List nodes', aliases=['ls', 'show'])
 
     def list_func(args):
         logger.debug("Listing nodes")
         print("Nodes:\n=====")
         nodes = api.list()
-        display.print_nodes(nodes)
+        display.print_tree(nodes)
     p_list.set_defaults(func=list_func)
 
     # Add
+    # atomic add
     p_add = subs.add_parser('add', help='Add a node to the graph',
                             aliases=['a'])
-    p_add.add_argument('name', nargs='+', help='name')
     p_add.add_argument('-p', '--parent', help='Parent node')
-    p_add.add_argument('-b', '--body', help='Body')
 
     def add_func(args):
         name_str = ' '.join(args.name)
         api.add(parent=args.parent, name=name_str, body=args.body)
-        # api.binary_add(args)  # Guide them through insertion
     p_add.set_defaults(func=add_func)
 
     # Update
+    # atomic update node1 [key=value,...]
     p_update = subs.add_parser('update', help='Update attributes of a node',
                                aliases=['u'])
     p_update.add_argument('index', help='Index of node to update', type=int)
-    p_update.add_argument('-t', '--name', nargs='+', help='name')
-    p_update.add_argument('-b', '--body', help='Body')
 
     def update_func(args):
         name_str = ' '.join(args.name)
@@ -52,6 +52,7 @@ def add_arguments(parser, api):
     p_update.set_defaults(func=update_func)
 
     # Delete
+    # atomic delete node1
     p_delete = subs.add_parser('delete', help='Delete a node from the graph',
                                aliases=['d'])
     p_delete.add_argument('index', help='Index to remove', type=int)
@@ -61,12 +62,16 @@ def add_arguments(parser, api):
     p_delete.set_defaults(func=delete_func)
 
     # Link
-    p_link = subs.add_parser('link', help='Link two nodes by type of relation',
-                             aliases='l')
+    # atomic link node1 node2 parent [key=value,...]
+    # atomic link --delete node1 node2
+    # atomic link node1 node2
+    p_link = subs.add_parser('link', help='Link two nodes', aliases='l')
     p_link.add_argument('src', help='Starting node')
     p_link.add_argument('dest', help='Destination node')
-    p_link.add_argument('type', help='Relationship type',
-                        choices=[graph.PARENT, graph.RELATED, graph.PRECEDES])
+    p_link.add_argument('type', help='Relationship type', required=False,
+                        choices=[graph.PARENT, graph.RELATED, graph.PRECEDES],
+                        default=graph.RELATED)
+    p_link.add_argument('-d', '--delete', help='Delete the link')
 
     def link_func(args):
         api.link(args.src, args.dest, type_=args.type)
