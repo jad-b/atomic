@@ -20,7 +20,7 @@ class NodeAPISpec(metaclass=ABCMeta):
 
     @abstractmethod
     def get(self, idx):
-        """Retrieve a node by index."""
+        """Retrieve a node by index, or many nodes."""
         pass
 
     @abstractmethod
@@ -39,7 +39,7 @@ class NodeAPISpec(metaclass=ABCMeta):
         pass
 
 
-def EdgeAPISpec(metaclass=ABCMeta):
+class EdgeAPISpec(metaclass=ABCMeta):
     """API Specification for interacting with Edge resources.
 
     /edges
@@ -48,21 +48,21 @@ def EdgeAPISpec(metaclass=ABCMeta):
     """
 
     @abstractmethod
-    def get(self, idx):
+    def get(self, src, dest):
         """Retrieve an edge by id or source & destination."""
         pass
 
     @abstractmethod
-    def add(self, parent=None, **kwargs):
+    def add(self, src, dest, type_, **kwargs):
         """Add an edge to the Graph."""
         pass
 
     @abstractmethod
-    def update(self, uid, **kwargs):
+    def update(self, src, dest, **kwargs):
         """Update an edge's attributes."""
         pass
 
     @abstractmethod
-    def delete(self, uid):
+    def delete(self, src, dest):
         """Delete an edge from the graph."""
         pass

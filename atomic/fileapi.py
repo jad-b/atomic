@@ -2,31 +2,40 @@
 """
 API implementation for using a local file as the data store.
 """
-from io import StringIO
-
 from colorama import Fore, Style
 import networkx as nx
 
 from atomic import api, graph, serial, log
 
 
-class FileAPI(api.NodeAPISpec, api.EdgeAPISpec):
+class FileAPI:
     """File-system backed implementation of the API."""
 
-    def __init__(self):
+    def __init__(self, G=None):
         self.logger = log.get_logger('api')
-        self.G = graph.load()
+        self.G = G or graph.load()
+        self.Node = FileNodeAPI(self.G, self.logger)
+        self.Edge = FileEdgeAPI(self.G, self.logger)
+
+    def save(self):
+        graph.save(self.G)
+
+
+class FileNodeAPI(api.NodeAPISpec):
+    """File-system backed implementation of the Node API."""
+
+    def __init__(self, G, logger):
+        self.logger = logger
+        self.G = G
+        # Find the highest valued node
         serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 0 else 0
-        self.logger.debug("Initalizing serial to %d", serial_idx)
         self.serial = serial.Serial(serial_idx)
 
-    def get(self, idx):
+    def get(self, idx=None):
         """Retrieve an item by index (uuid)."""
+        if idx is None:
+            return self.G.nodes_iter(data=True)
         return self.G.node[idx]
-
-    def list(self):
-        """Retrieve all items."""
-        return self.G.nodes_iter(data=True)
 
     def add(self, parent=None, **kwargs):
         idx = self.serial.index
@@ -49,11 +58,6 @@ class FileAPI(api.NodeAPISpec, api.EdgeAPISpec):
             graph.save(self.G)
         except nx.exception.NetworkXError:
             return ValueError("{:d} wasn't found in the graph".format(idx))
-
-    def link(self, src, dest, type, **kwargs):
-        """Link two nodes in the graph."""
-        self.G.add_edge(src, dest, type=type, **kwargs)
-        graph.save(self.G)
 
     def binary_add(self, item):
         """Insert an item after using a binary-search comparison."""
@@ -95,21 +99,32 @@ class FileAPI(api.NodeAPISpec, api.EdgeAPISpec):
                       "Hit Ctrl-D to quit.")
                 ans = None
 
-    def save(self):
-        graph.save(self.G)
-
     def __str__(self):
-        """Output the list of items."""
-        if len(self.items) == 0:
-            return "No items found."
-        buf = StringIO()
-        for i, x in enumerate(self.items):
-            buf.write("{:d}) {:s}\n".format(i, str(x)))
-        return buf.getvalue().rstrip()
-
-    def __repr__(self):
-        return "Q(items=[{:d}], completed=[{:d}], filename={})".format(
-            len(self.items), len(self.completed), self.filename)
+        return "FileNodeAPI"
 
     def __iter__(self):
         return self.graph.nodes_iter()
+
+
+class FileEdgeAPI(api.EdgeAPISpec):
+
+    def __init__(self, G, logger):
+        self.G = G
+        self.logger = logger
+
+    def get(self, src, dest, **kwargs):
+        """Retrieve an edge by id or source & destination."""
+        if kwargs is None:  # Single item retrieval
+            return self.G.edge[src][dest]
+
+    def add(self, src, dest, type_, **kwargs):
+        """Add an edge to the Graph."""
+        self.G.add_edge(src, dest, type=type_, **kwargs)
+
+    def update(self, src, dest, **kwargs):
+        """Update an edge's attributes."""
+        self.G.edge[src][dest] = {**self.G.edge[src][dest], **kwargs}
+
+    def delete(self, src, dest, **kwargs):
+        """Delete an edge from the graph."""
+        self.G.remove_edge(src, dest)

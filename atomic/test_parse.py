@@ -9,7 +9,7 @@ def test_time_parsing():
         dt_inputs = (
             "14:02",
             "2:02 pm",
-            "2015 Nov 16"
+            "2015 Nov 16",
             "14",
             "Dec 14",
             "2015 Dec 14",

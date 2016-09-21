@@ -1,8 +1,13 @@
+from atomic import log
+
+
 class Serial:
     """Mimics the behavior of the serial type in postgresql, returning an auto-
     incremented integer."""
 
     def __init__(self, start=0):
+        self.logger = log.get_logger('api')
+        self.logger.debug("Initalizing serial to %d", start)
         self._index = start
 
     @property

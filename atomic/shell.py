@@ -1,6 +1,6 @@
 import cmd
 import os
-import re
+import shlex
 import sys
 import traceback
 from importlib import reload
@@ -12,7 +12,29 @@ from atomic.fileapi import FileAPI
 _user = os.getenv('USER', 'user')
 
 
-class Valence(cmd.Cmd):
+class ShlexCmd:
+    """Splits arguments as the shell would."""
+
+    def onecmd(self, line):
+        cmd, arg, line = self.parseline(line)
+        if not line:
+            return self.emptyline()
+        if cmd is None:
+            return self.default(line)
+        self.lastcmd = line
+        if line == 'EOF':
+            self.lastcmd = ''
+        if cmd == '':
+            return self.default(line)
+        else:
+            try:
+                func = getattr(self, 'do_' + cmd)
+                return func(shlex.split(arg))
+            except AttributeError:
+                return self.default(line)
+
+
+class Valence(ShlexCmd, cmd.Cmd):
     """Valence is the command-line shell a user interacts with. It is composed
     of:
 
@@ -20,7 +42,7 @@ class Valence(cmd.Cmd):
         3. An auto-incrementing number generator
         4. The cmd.Cmd REPL shell
     """
-    intro = "Hi."
+    intro = "Welcome to Valence."
     prompt = '(valence)> '
 
     def __init__(self, api=None):
@@ -46,35 +68,33 @@ class Valence(cmd.Cmd):
         """Handle empty lines by printing available options."""
         self.do_help('')
 
-    def postcmd(self, stop, line):
-        pass
-
     def precmd(self, line):
         """Record all cmd interactions."""
         self.logger.debug(line.lower())
         return line
 
-    def do_list(self, arg):
+    def do_list(self, *args):
         """Display nodes in the system."""
         display.print_nodes(self.api.list())
 
-    def do_add(self, arg):
+    def do_add(self, *args):
         """Add a node."""
-        self.api.add(name=arg)
+        self.api.add(name=args)
 
-    def do_update(self, arg):
+    def do_update(self, *args):
         """Update a node: <idx> <body arguments>"""
         idx, args = arg.split(' ', 1)  # Split off the index
+        ns = None
         self.api.update(int(idx), body=args)
 
-    def do_remove(self, arg):
+    def do_remove(self, *args):
         """Remove a node."""
         try:
             self.api.delete(int(arg))
         except ValueError:
             print("{:d} not found".format(int(arg)))
 
-    def do_link(self, arg):
+    def do_link(self, *args):
         """Create a connection between two entries.
 
         Usage:
@@ -83,36 +103,11 @@ class Valence(cmd.Cmd):
         src, dest, type_, kwargs = parse.parse_link_args(arg)
         self.api.link(src, dest, type_, **kwargs)
 
-    def do_show(self, arg):
-        """Display a single item.
-
-        Usage:
-            itemID
-        """
-        if arg == "":
-            print("You asked for nothing, and that's what you got.")
-            return
-        pass
-
-    def do_tag(self, arg):
-        """Add a tag to the node of given index."""
-        # 3 cat dog
-        # idx: 3
-        # tags: (cat, dog)
-        m = re.match(r'^(?P<idx>\d+)\s+(?P<tags>.+)$', arg)
-        idx = int(m.groupdict()['idx'])
-        tags = m.groupdict()['tags'].split()
-        node = self.graph[idx]
-        if node.get('tags', False):   # Retieve existing tag list
-            node.extend(tags)
-        else:                               # Attach new tag list
-            node['tags'] = tags
-
-    def do_goodnight(self, arg):
+    def do_goodnight(self, *args):
         """Exit Valence with a parting quote."""
         raise QuitException(messages.SWEET_PRINCE)
 
-    def do_reload(self, arg):
+    def do_reload(self, *args):
         """Live reload the shell's source code."""
         raise ReloadException("Code reload requested by user")
 

@@ -9,7 +9,7 @@ from datetime import datetime, date, time
 
 # key1=string key2=multi-word string...
 PARSE_KEY_VALUE_RE = re.compile(
-    r'\b(\w+)\s*=\s*([^=]*)(?=\s+\w+\s*=|$)')
+    r'\b([^\s]+)\s*=\s*([^=]*)(?=\s+\w+\s*=|$)')
 # <src> <dest> <type> [key=value]...
 PARSE_LINK_ARGS_RE = re.compile(
     r'(?P<src>\d+)\s+(?P<dest>\d+)\s+(?:type=)?(?P<type>\w+)\s*(?P<kwargs>.*)')
@@ -17,12 +17,15 @@ PARSE_LINK_ARGS_RE = re.compile(
 
 def parse_key_values(s):
     """Parse key-value pairs from 'key1=string key2=multi-word string ...'"""
-    if s == '':
-        return {}
-    match = PARSE_KEY_VALUE_RE.match(s)
-    if match is None:
-        raise ValueError("Unable to parse key-values from '{}'".format(s))
     return {m.group(1): m.group(2) for m in PARSE_KEY_VALUE_RE.finditer(s)}
+
+
+def parse_non_kv(s):
+    """Parse _up_ to the first key=value; 'cats k=v' returns 'cats'."""
+    m = PARSE_KEY_VALUE_RE.search(s)
+    if m is None:
+        return s
+    return s[:m.start()].strip()
 
 
 def parse_link_args(s):
