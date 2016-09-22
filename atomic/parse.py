@@ -37,6 +37,13 @@ def parse_link_args(s):
     return int(gd['src']), int(gd['dest']), gd['type'], \
         parse_key_values(gd.get('kwargs', ''))
 
+
+def input_bool(msg='Are you sure?', truths=('y', 'yes')):
+    """Confirm action via the CLI."""
+    b = input(msg + ' ')
+    return b in truths
+
+
 # Date & Time functions
 timestamp_formats = (
     "%d",               # Day: 16

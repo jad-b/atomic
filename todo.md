@@ -1,12 +1,13 @@
 # todo
 
+* [x] Get all tests passing
+* [x] Update FileAPI to use new NodeAPI, EdgeAPI classes
+* [=] Utilize the CLI sub-commands to parse shell commands
 * [?] Distinguish between setting a tag and deleting a key=value with "key=''"
-* [ ] Utilize the CLI sub-commands to parse shell commands
-* [ ] Update FileAPI to use new NodeAPI, EdgeAPI classes
 * [ ] Extend Valence through the use of mixins
     * [ ] ReloadMixin
     * [ ] NodeMixin
-    - http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.AcceptMixin
+    * [x] ShlexMixin
 
 ## Good Ideas?
 * [ ] Extend the API to support basic Graph operations
