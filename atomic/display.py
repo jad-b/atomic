@@ -16,7 +16,7 @@ def print_tree(nodes):
             pre = descend
         else:
             pre = backbone + ' ' * 4 * (depth - 2) + descend
-        sio.write(pre + n + '\n')
+        sio.write("{}{}\n".format(pre, str(n)))
     print(sio.getvalue().rstrip('\n'))
 
 

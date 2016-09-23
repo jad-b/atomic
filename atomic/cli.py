@@ -22,7 +22,7 @@ def add_arguments(parser, api):
     # atomic list q=Lucene||Solr, haven't decided
     p_list = subs.add_parser('list', help='List nodes', aliases=['ls', 'show'])
 
-    def list_func(api):
+    def list_func(api, **kwargs):
         logger.debug("Listing nodes")
         print("Nodes:\n=====")
         nodes = api.Node.get()  # Grab all nodes
@@ -49,7 +49,7 @@ def add_arguments(parser, api):
                                aliases=['u'])
     p_update.add_argument('index', help='Index of node to update', type=int)
 
-    def update_func(args):
+    def update_func(args, **kwargs):
         name_str = ' '.join(args.name)
         api.Node.update(args.index, name=name_str, body=args.body)
     p_update.set_defaults(func=update_func)
@@ -60,7 +60,7 @@ def add_arguments(parser, api):
                                aliases=['d'])
     p_delete.add_argument('index', help='Index to remove', type=int)
 
-    def delete_func(args):
+    def delete_func(args, **kwargs):
         api.Node.delete(args.index)
     p_delete.set_defaults(func=delete_func)
 
@@ -91,7 +91,7 @@ def new_parser(api):
 
 def process(parser, api, args=None):
     """Process arguments and call the matching function."""
-    ns = parser.parse_args(args=None)
+    ns = parser.parse_args(args)
     print(ns)
     ns.func(api=api, parser=parser, **vars(ns))
 

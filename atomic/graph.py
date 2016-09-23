@@ -5,6 +5,7 @@ graph
 """
 import json
 import os
+from io import StringIO
 from collections import deque
 
 import networkx as nx
@@ -53,14 +54,14 @@ def hierarchy(G):
     """Produce child nodes in a depth-first order."""
     dq = deque()
     for root in toplevel(G):
-        yield root, len(dq)  # Depth 0
+        yield Node(root, **G.node[root]), len(dq)  # Depth 0
         # Iterate over all children
         dq.append(root)
         for src, dest in nx.dfs_edges(G, source=root):
             while len(dq) > 0 and dq[-1] != src:
                 dq.pop()  # Unwind the stack
             if G.edge[src][dest].get('type') == PARENT:
-                yield dest, len(dq)
+                yield Node(dest, **G.node[dest]), len(dq)
             dq.append(dest)
 
 
@@ -74,6 +75,20 @@ class Node:
 
     def to_json(self):
         return self.__dict__
+
+    def __str__(self):
+        return "{:d}) {:s}".format(self.uid, getattr(self, 'name', self.uid))
+
+    def __repr__(self):
+        sio = StringIO()
+        header = '[{:d}] {:s}'.format(
+            self.uid, getattr(self, 'name', '<No Name>'))
+        sio.write('{}\n'.format(header))
+        for k, v in self.__dict__:
+            if k == 'name':
+                continue
+            sio.write('  {key}: {value}\n'.format(key=k, value=v))
+        return sio.getvalue().rstrip('\n')
 
     @classmethod
     def from_json(cls, json_object):
@@ -95,9 +110,6 @@ class Node:
         if isinstance(o, Node):
             return (self.uid == o.uid)
         raise NotImplemented
-
-    def __str__(self):
-        return self.uid
 
 
 class Thought(Node):
@@ -125,31 +137,3 @@ class Action(Thought):
         self.time_estd = time_estd
         self.time_spent = time_spent
         self.done = done
-
-"""
-func vis(t tree) {
-    // Short-circuit on empty values
-    if len(t) == 0 {
-        fmt.Println("<empty>")
-        return
-    }
-    // Define a recursive function
-    var f func(int, string)
-    f = func(n int, pre string) {
-        ch := t[n].children
-        if len(ch) == 0 {
-            fmt.Println("╴", t[n].label)
-            return
-        }
-        fmt.Println("┐", t[n].label)
-        last := len(ch) - 1
-        for _, ch := range ch[:last] {
-            fmt.Print(pre, "├─")
-            f(ch, pre+"│ ")
-        }
-        fmt.Print(pre, "└─")
-        f(ch[last], pre+"  ")
-    }
-    f(0, "")
-}
-"""

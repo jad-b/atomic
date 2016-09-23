@@ -13,6 +13,7 @@ class ShlexMixin:
 
     def onecmd(self, line):
         cmd, arg, line = self.parseline(line)
+        # print("cmd=%s arg=%s line=%s" % (cmd, arg, line))
         if not line:
             return self.emptyline()
         if cmd is None:
@@ -20,17 +21,20 @@ class ShlexMixin:
         self.lastcmd = line
         if line == 'EOF':
             self.lastcmd = ''
+            return self.do_EOF()
         if cmd == '':
             return self.default(line)
         else:
-            try:
-                # func = getattr(self, 'do_' + cmd)
-                # Use the CLI parser
-                cli.process(self.parser, self.api, shlex.split(line))
-            except SystemExit:
-                # TODO Return CLI help message
-                self.parser.print_help()
-                return self.default(line)
+            try:  # See if there's a method called that
+                func = getattr(self, 'do_' + cmd)
+                return func(arg)
+            except AttributeError:
+                try:  # Use the CLI parser
+                    cli.process(self.parser, self.api, shlex.split(cmd))
+                except SystemExit:
+                    # TODO Return CLI help message
+                    self.parser.print_help()
+                    return self.default(line)
 
 
 class ReloadMixin:
@@ -46,9 +50,12 @@ class ReloadMixin:
             except Exception:     # Don't die on exceptions, only (^-c)
                 traceback.print_exception(*sys.exc_info())
 
-    def do_EOF(self, args):
+    def do_EOF(self, *args):
         """Save the graph before quitting."""
-        raise KeyboardInterrupt
+        return True
+
+    def do_quit(self, args):
+        return True
 
     def emptyline(self):
         """Handle empty lines by printing available options."""
@@ -58,18 +65,22 @@ class ReloadMixin:
         """Live reload the shell's source code."""
         raise self._ReloadException("Code reload requested by user")
 
+    @staticmethod
+    def _goodbye():
+        print('Goodbye,', os.getenv("USER", 'you person, you.'))
+        sys.exit(0)
+
     @classmethod
     def loop(cls, *args, **kwargs):
-        """Run the command loop."""
+        """Run the command loop until a KeyboardInterrupt is raised."""
         v = None
         try:
             v = cls(*args, **kwargs)
             v.cmdloop()
         except KeyboardInterrupt:
-            print('Goodbye,', os.getenv("USER", 'you person, you.'))
-            sys.exit(0)
-        finally:
-            pass
+            cls._goodbye()
+        except Exception:
+            return None
 
     # Semi-private exception classes, only for use inside the ReloadMixin.
     class _ReloadException(Exception):

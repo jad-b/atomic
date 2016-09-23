@@ -34,7 +34,9 @@ class FileNodeAPI(api.NodeAPISpec):
     def get(self, idx=None):
         """Retrieve an item by index (uuid)."""
         if idx is None:
-            return self.G.nodes_iter(data=True)
+            self.logger.debug("Retrieving all nodes")
+            return graph.hierarchy(self.G)
+        self.logger.debug("Retrieving node w/ id=%d", idx)
         return self.G.node[idx]
 
     def add(self, parent=None, **kwargs):
