@@ -15,9 +15,9 @@ def G():
     sample_graph = nx.DiGraph()
     sample_graph.add_edges_from([
         ('a', 'b'),
+        ('a', 'c'),
         ('b', 'd'),
         ('b', 'e'),
-        ('a', 'c'),
         ('c', 'f'),
         ('f', 'g'),
         ('f', 'h')
@@ -41,14 +41,14 @@ def test_dfs_depth(G):
 
     """
     exp = {
-        ('a', 0),
-        ('b', 1),
-        ('d', 2),
-        ('e', 2),
-        ('c', 1),
-        ('f', 2),
-        ('g', 3),
-        ('h', 3)
+        (graph.Node(0, name='a'), 0),
+        (graph.Node(1, name='b'), 1),
+        (graph.Node(2, name='d'), 2),
+        (graph.Node(3, name='e'), 2),
+        (graph.Node(4, name='c'), 1),
+        (graph.Node(5, name='f'), 2),
+        (graph.Node(6, name='g'), 3),
+        (graph.Node(7, name='h'), 3)
     }
     obs = set(graph.hierarchy(G))
     assert obs == exp

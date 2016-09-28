@@ -1,3 +1,4 @@
+import argparse
 import cmd
 import os
 import shlex
@@ -25,16 +26,42 @@ class ShlexMixin:
         if cmd == '':
             return self.default(line)
         else:
-            try:  # See if there's a method called that
+            try:  # See if there's a method called 'cmd'
                 func = getattr(self, 'do_' + cmd)
                 return func(arg)
             except AttributeError:
+                # print("cmd=%s arg=%s line=%s" % (cmd, arg, line))
                 try:  # Use the CLI parser
-                    cli.process(self.parser, self.api, shlex.split(cmd))
-                except SystemExit:
-                    # TODO Return CLI help message
-                    self.parser.print_help()
-                    return self.default(line)
+                    cli.process(self.parser, self.api, [cmd] +
+                                shlex.split(arg))
+                except SystemExit as e:
+                    if e.code == 0:  # It coo'.
+                        return
+                    subparser_help = self._subparser_help(self.parser, cmd)
+                    if subparser_help:
+                        print(subparser_help)
+                    else:
+                        print(self.parser.format_help())
+
+    def do_help(self, line):
+        if line:
+            s = self._subparser_help(self.parser, line)
+            if s:
+                print(s)
+            else:
+                print("Unrecognized command: '%s'" % line)
+                self.parser.print_help()
+        else:
+            self.parser.print_help()
+
+    def _subparser_help(self, parser, cmd):
+        """Lookup the help dialog for a specific subparser."""
+        spa = next(a for a in parser._actions if
+                   isinstance(a, argparse._SubParsersAction))
+        d = dict(spa.choices.items())
+        if cmd in d:
+            return d[cmd].format_help()
+        return None
 
 
 class ReloadMixin:

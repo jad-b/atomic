@@ -37,7 +37,7 @@ def add_arguments(parser, api):
     p_add.add_argument('args', nargs='+', help='<Node name>... [key=value...]')
 
     def add_func(api, args, parent=None, **kwargs):
-        line = ' '.join(args)
+        line = ' '.join(args)  # Rejoin args for regex parsing
         name = parse.parse_non_kv(line)
         kwargs = parse.parse_key_values(line[len(name):])
         api.Node.add(parent=parent, name=name, **kwargs)
@@ -69,15 +69,19 @@ def add_arguments(parser, api):
     # atomic link --delete node1 node2
     # atomic link node1 node2
     p_link = subs.add_parser('link', help='Link two nodes', aliases='l')
-    p_link.add_argument('src', help='Starting node')
-    p_link.add_argument('dest', help='Destination node')
+    p_link.add_argument('src', help='Starting node', type=int)
+    p_link.add_argument('dest', help='Destination node', type=int)
     p_link.add_argument('type', help='Relationship type',
                         choices=[graph.PARENT, graph.RELATED, graph.PRECEDES],
                         default=graph.RELATED)
+    p_add.add_argument('kvs', nargs='*', help='key=value...')
     p_link.add_argument('-d', '--delete', help='Delete the link')
 
-    def link_func(api, src, dest, type, kvs, **kwargs):
-        key_values = parse.parse_key_values(' '.join(kvs))
+    def link_func(api, src, dest, type, kvs=None, *args, **kwargs):
+        if kvs is not None:
+            key_values = parse.parse_key_values(' '.join(kvs))
+        else:
+            key_values = {}
         api.Edge.add(src, dest, type_=type, **key_values)
     p_link.set_defaults(func=link_func)
 
@@ -91,8 +95,9 @@ def new_parser(api):
 
 def process(parser, api, args=None):
     """Process arguments and call the matching function."""
+    # print("Pre-process: %s" % args)
     ns = parser.parse_args(args)
-    print(ns)
+    # print("Post-parse: %s" % ns)
     ns.func(api=api, parser=parser, **vars(ns))
 
 

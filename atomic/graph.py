@@ -52,8 +52,8 @@ def toplevel(G):
 
 def hierarchy(G):
     """Produce child nodes in a depth-first order."""
-    dq = deque()
     for root in toplevel(G):
+        dq = deque()
         yield Node(root, **G.node[root]), len(dq)  # Depth 0
         # Iterate over all children
         dq.append(root)
@@ -84,7 +84,7 @@ class Node:
         header = '[{:d}] {:s}'.format(
             self.uid, getattr(self, 'name', '<No Name>'))
         sio.write('{}\n'.format(header))
-        for k, v in self.__dict__:
+        for k, v in self.__dict__.items():
             if k == 'name':
                 continue
             sio.write('  {key}: {value}\n'.format(key=k, value=v))
@@ -94,7 +94,7 @@ class Node:
     def from_json(cls, json_object):
         return cls(**json_object)
 
-    def __hash__(self, o):
+    def __hash__(self):
         """Hash based off the UID."""
         return hash(self.uid)
 

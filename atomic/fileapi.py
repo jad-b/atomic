@@ -13,7 +13,7 @@ class FileAPI:
 
     def __init__(self, G=None):
         self.logger = log.get_logger('api')
-        self.G = G or graph.load()
+        self.G = G if G is not None else graph.load()
         self.Node = FileNodeAPI(self.G, self.logger)
         self.Edge = FileEdgeAPI(self.G, self.logger)
 
@@ -41,12 +41,17 @@ class FileNodeAPI(api.NodeAPISpec):
 
     def add(self, parent=None, **kwargs):
         idx = self.serial.index
-        self.logger.debug("Adding node %s", idx)
+        self.logger.debug("Node.add: idx=%d kwargs=%s", idx, kwargs)
         self.G.add_node(idx, attr_dict=kwargs)  # Create node
         if parent is not None:
-            self.logger.debug("Linking to %s", parent)
-            self.G.add_edge(parent, idx, parent_of=True)  # Link to parent
+            p = int(parent)
+            if self.G.node.get(p) is None:
+                self.logger.warning("No parent node '%d' found", p)
+            else:
+                self.logger.debug("Linking to %s", parent)
+                self.G.add_edge(parent, idx, parent_of=True)  # Link to parent
         graph.save(self.G)
+        return idx
 
     def update(self, idx, **kwargs):
         """Update item attributes."""
@@ -114,19 +119,23 @@ class FileEdgeAPI(api.EdgeAPISpec):
         self.G = G
         self.logger = logger
 
-    def get(self, src, dest, **kwargs):
+    def get(self, src: int, dest: int, **kwargs):
         """Retrieve an edge by id or source & destination."""
         if kwargs is None:  # Single item retrieval
             return self.G.edge[src][dest]
 
-    def add(self, src, dest, type_, **kwargs):
+    def add(self, src: int, dest: int, type_, **kwargs):
         """Add an edge to the Graph."""
+        self.logger.debug("Adding edge between %d => %d", src, dest)
         self.G.add_edge(src, dest, type=type_, **kwargs)
+        graph.save(self.G)
 
     def update(self, src, dest, **kwargs):
         """Update an edge's attributes."""
         self.G.edge[src][dest] = {**self.G.edge[src][dest], **kwargs}
+        graph.save(self.G)
 
     def delete(self, src, dest, **kwargs):
         """Delete an edge from the graph."""
         self.G.remove_edge(src, dest)
+        graph.save(self.G)

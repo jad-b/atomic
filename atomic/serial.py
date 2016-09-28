@@ -7,7 +7,7 @@ class Serial:
 
     def __init__(self, start=0):
         self.logger = log.get_logger('api')
-        self.logger.debug("Initalizing serial to %d", start)
+        self.logger.debug("Initializing serial to %d", start)
         self._index = start
 
     @property

@@ -7,6 +7,11 @@ extracting REPL shell and CLI arguments into function arguments.
 import re
 from datetime import datetime, date, time
 
+import bs4
+import mistune
+from bs4 import BeautifulSoup
+
+
 # key1=string key2=multi-word string...
 PARSE_KEY_VALUE_RE = re.compile(
     r'\b([^\s]+)\s*=\s*([^=]*)(?=\s+\w+\s*=|$)')
@@ -76,3 +81,74 @@ def smart_date(dt):
     """Combine the parsed date/time/datetime with the current date to allow for
     shorthand date entry."""
     pass
+
+
+def import_markdown(api, s):
+    """Parse a markdown document into the graph.
+
+    Only headers and list objects are used; the remainder is skipped.
+    List items are created as nodes. Nested lists are interpreted as a parental
+    hierarchy. Headers are attached to all following nodes as tags.
+    """
+    md = mistune.markdown(s)
+    soup = BeautifulSoup(md, 'html.parser')
+    _recursive_parse(api, soup.contents, MarkdownContext(), None)
+
+
+class MarkdownContext:
+    """Manage depth-based context from header tags in markdown.
+
+    Example Markdown:
+
+        # Header1
+        ## Header2
+        #### Header4
+
+    Represents as the following internally:
+
+        [Header1, Header2, None, Header4, None, None]
+
+    Insertions clears the subsequent levels;
+    thus, inserting at Header3 clears the array values of 3, 4, 5.
+    """
+
+    def __init__(self, size=6):
+        self.size = size
+        self._arr = [None] * size
+
+    def clear(self, idx=0):
+        self._arr[idx:] = [None] * (self.size - idx)
+
+    def insert(self, idx, val):
+        print("Inserting %s at %d; %s" % (val, idx, str(self._arr)))
+        self._arr[idx-1] = val
+        self.clear(idx)
+
+    def get(self, idx=None):
+        if idx:
+            return self._arr[idx-1]
+        return {x: '' for x in self._arr if x is not None}
+
+
+def _recursive_parse(api, tags, ctx, parent=None):
+    print("Parsing:\n%s\nparent=%s" % (tags,
+                                       parent.string if parent else ''))
+    last = None
+    for c in tags:
+        if not isinstance(c, bs4.element.Tag):
+            continue
+        print("Tag: %s=%s (parent=%s)" %
+              (c.name, c.string, 'None' if parent is None else str(parent)))
+        if c.name.startswith('h'):  # Save as tag
+            idx = int(c.name[1:])  # Extract header depth from tag
+            ctx.insert(idx,  c.string)
+        elif c.name == 'ul' or c.name == 'ol':
+            _recursive_parse(api, c.children, ctx, last)
+        elif c.name == 'li':  # Add as node
+            d = ctx.get()
+            d['name'] = c.string   # Override the 'name' attribute
+            uid = api.Node.add(parent, **d)
+            print("Added uid=%d kwargs=%s" % (uid, d))
+            last = uid  # Set ourselves as the last seen
+            # In case the list has become nested within this list element:
+            _recursive_parse(api, c.children, ctx, last)
