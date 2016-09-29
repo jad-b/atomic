@@ -78,10 +78,16 @@ Header 1
     * todo312
 """.strip()
 
+nested_list = """
+* t1
+  * t11
+    * t111
+""".strip()
+
 
 def test_markdown_to_graph():
     api = fileapi.FileAPI(G=nx.DiGraph())
-    parse.import_markdown(api, sample_markdown)
+    parse.import_markdown(api, nested_list)
 
     todo21 = api.Node.get(0)  # todo21
     assert 'Header1' in todo21

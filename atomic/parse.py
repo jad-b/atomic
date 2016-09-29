@@ -120,35 +120,50 @@ class MarkdownContext:
         self._arr[idx:] = [None] * (self.size - idx)
 
     def insert(self, idx, val):
-        print("Inserting %s at %d; %s" % (val, idx, str(self._arr)))
-        self._arr[idx-1] = val
+        print("CONTEXT.INSERT: [%d]%s; %s" % (idx, val, str(self._arr)))
+        self._arr[idx - 1] = val
         self.clear(idx)
 
     def get(self, idx=None):
         if idx:
-            return self._arr[idx-1]
+            return self._arr[idx - 1]
         return {x: '' for x in self._arr if x is not None}
 
 
 def _recursive_parse(api, tags, ctx, parent=None):
-    print("Parsing:\n%s\nparent=%s" % (tags,
-                                       parent.string if parent else ''))
+    # import pdb
+    # pdb.set_trace()
     last = None
-    for c in tags:
-        if not isinstance(c, bs4.element.Tag):
-            continue
-        print("Tag: %s=%s (parent=%s)" %
-              (c.name, c.string, 'None' if parent is None else str(parent)))
-        if c.name.startswith('h'):  # Save as tag
-            idx = int(c.name[1:])  # Extract header depth from tag
-            ctx.insert(idx,  c.string)
-        elif c.name == 'ul' or c.name == 'ol':
-            _recursive_parse(api, c.children, ctx, last)
-        elif c.name == 'li':  # Add as node
-            d = ctx.get()
-            d['name'] = c.string   # Override the 'name' attribute
-            uid = api.Node.add(parent, **d)
-            print("Added uid=%d kwargs=%s" % (uid, d))
-            last = uid  # Set ourselves as the last seen
-            # In case the list has become nested within this list element:
-            _recursive_parse(api, c.children, ctx, last)
+    for t in tags:
+        if isinstance(t, bs4.element.NavigableString):
+            if t.string == '\n':
+                continue
+            _print_update('ADD', parent, t)
+            last = _add_markdown_node(api, t, ctx, parent)
+        elif t.name.startswith('h'):  # Save as tag
+            # _print_update('CONTEXT', parent, t)
+            idx = int(t.name[1:])  # Extract header depth from tag
+            ctx.insert(idx,  t.string)
+        elif t.name == 'ul' or t.name == 'ol':
+            _print_update('RECUR', parent, t)
+            _recursive_parse(api, t.children, ctx, last)
+        elif t.name == 'li':
+            _print_update('RECUR', parent, t)
+            _recursive_parse(api, t.children, ctx, parent)
+        else:
+            print("WARNING: tag=%s parent=%s" %
+                  (t.name, parent.name if parent is not None else 'None'))
+
+
+def _print_update(action, parent, tag):
+    print("{action:>5} ({parent}) <{tag.name}>{tag.string}".format(
+        action=action,
+        parent=parent.string if parent is not None else 'None',
+        tag=tag))
+
+
+def _add_markdown_node(api, t, ctx, parent):
+    d = ctx.get()
+    d['name'] = t.string   # Override the 'name' attribute
+    # api.Node.add(parent, **d)
+    return t
