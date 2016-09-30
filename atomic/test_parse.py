@@ -1,3 +1,4 @@
+import textwrap
 from collections import namedtuple
 
 import networkx as nx
@@ -62,46 +63,144 @@ def test_parse_link_args():
         obs = parse.parse_link_args(case.input)
         assert case.out == obs
 
-sample_markdown = """
-Header 1
-========
-## Header 2
 
-* todo21
+__test_markdown = {
+    '1-level': """
+               * t1
+                 * t11
+               """,
+    '3-level': """
+               * t1
+                * t11
+                * t12
+                  * t121
+               """,
+    'complex': """
+               Header 1
+               ========
+               ## Header 2
 
-## Header 3
+               * t1
 
-* todo31
-    * todo311
-        * todo3111
-        * todo3112
-    * todo312
-""".strip()
+               ## Header 3
 
-nested_list = """
-* t1
-  * t11
-    * t111
-""".strip()
+               * t2
+                   * t21
+                       * t211
+                       * t212
+                   * t22
+               """,
+}
 
 
-def test_markdown_to_graph():
-    api = fileapi.FileAPI(G=nx.DiGraph())
-    parse.import_markdown(api, nested_list)
-
-    todo21 = api.Node.get(0)  # todo21
-    assert 'Header1' in todo21
-    assert 'Header2' in todo21
-
-    todo31 = api.Node.get('todo31')
-    assert 'Header1' in todo31
-    assert 'Header3' in todo31
-
-    edges = (
-        ('todo31', 'todo311'),
-        ('todo311', 'todo3111'),
-        ('todo311', 'todo3112'),
-        ('todo31', 'todo312')
+def test_recursive_parse():
+    _TestCase = namedtuple('_TestCase', ['markdown', 'expected'])
+    testcases = (
+        _TestCase(
+            __test_markdown['1-level'],
+            (
+                (None, 't1', {}),
+                ('t1', 't11', {})
+            )
+        ),
+        _TestCase(
+            __test_markdown['3-level'],
+            (
+                (None, 't1', {}),
+                ('t1', 't11', {}),
+                ('t1', 't12', {}),
+                ('t12', 't121', {}),
+            )
+        ),
+        _TestCase(
+            __test_markdown['complex'],
+            (
+                (None, 't1', {'Header 1': None, 'Header 2': None}),
+                (None, 't2', {'Header 1': None, 'Header 3': None}),
+                ('t2', 't21', {'Header 1': None, 'Header 3': None}),
+                ('t21', 't211', {'Header 1': None, 'Header 3': None}),
+                ('t21', 't212', {'Header 1': None, 'Header 3': None}),
+                ('t2', 't22', {'Header 1': None, 'Header 3': None}),
+            )
+        ),
     )
-    for src, dest in edges:
-        assert api.Edge.get(src, dest) is not None
+    for testcase in testcases:
+        s = textwrap.dedent(testcase.markdown).strip()
+        soup = parse._markdown_to_soup(s)
+        ctx = parse.MarkdownContext()
+        stream = parse._recursive_parse(soup.contents, ctx)
+        for obs, exp in zip(stream, testcase.expected):
+            # print("Comparing %s v. %s" % (str(obs), str(exp)))
+            assert obs == exp
+
+
+def test_import_tuple_stream():
+    _TestCase = namedtuple('_TestCase', ['tuples', 'nodes', 'edges'])
+    testcases = (
+        _TestCase(
+            (
+                (None, 't1', {}),
+                ('t1', 't11', {})
+            ),
+            (
+                (0, 't1'),  # (uid, name)
+                (1, 't11'),
+            ),
+            (
+                (0, 1),  # (src, dest)
+            )
+        ),
+        _TestCase(
+            (
+                (None, 't1', {}),
+                ('t1', 't11', {}),
+                ('t1', 't12', {}),
+                ('t12', 't121', {}),
+            ),
+            (
+                (0, 't1'),
+                (1, 't11'),
+                (2, 't12'),
+                (3, 't121'),
+            ),
+            (
+                (0, 1),
+                (0, 2),
+                (2, 3)
+            )
+        ),
+        _TestCase(
+            (
+                (None, 't1', {'Header 1': None, 'Header 2': None}),
+                (None, 't2', {'Header 1': None, 'Header 3': None}),
+                ('t2', 't21', {'Header 1': None, 'Header 3': None}),
+                ('t21', 't211', {'Header 1': None, 'Header 3': None}),
+                ('t21', 't212', {'Header 1': None, 'Header 3': None}),
+                ('t2', 't22', {'Header 1': None, 'Header 3': None}),
+            ),
+            (
+                (0, 't1'),
+                (1, 't2'),
+                (2, 't21'),
+                (3, 't211'),
+                (4, 't212'),
+                (5, 't22')
+            ),
+            (
+                (1, 2),
+                (2, 3),
+                (2, 4),
+                (1, 5)
+            )
+        )
+    )
+    for testcase in testcases:
+        G = nx.DiGraph()
+        api = fileapi.FileAPI(G)
+        parse._import_tuple_stream(api, testcase.tuples)
+        for uid, name in testcase.nodes:
+            assert uid in G
+            assert G.node[uid]['name'] == name
+        for src, dest in testcase.edges:
+            assert src in G
+            assert dest in G.edge[src]

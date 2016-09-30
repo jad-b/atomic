@@ -11,6 +11,8 @@ import bs4
 import mistune
 from bs4 import BeautifulSoup
 
+from atomic.log import get_logger
+
 
 # key1=string key2=multi-word string...
 PARSE_KEY_VALUE_RE = re.compile(
@@ -18,6 +20,8 @@ PARSE_KEY_VALUE_RE = re.compile(
 # <src> <dest> <type> [key=value]...
 PARSE_LINK_ARGS_RE = re.compile(
     r'(?P<src>\d+)\s+(?P<dest>\d+)\s+(?:type=)?(?P<type>\w+)\s*(?P<kwargs>.*)')
+
+logger = get_logger('atomic')
 
 
 def parse_key_values(s):
@@ -90,9 +94,14 @@ def import_markdown(api, s):
     List items are created as nodes. Nested lists are interpreted as a parental
     hierarchy. Headers are attached to all following nodes as tags.
     """
+    soup = _markdown_to_soup(s)
+    stream = _recursive_parse(api, soup.contents, MarkdownContext(), None)
+    _import_tuple_stream(api, stream)
+
+
+def _markdown_to_soup(s):
     md = mistune.markdown(s)
-    soup = BeautifulSoup(md, 'html.parser')
-    _recursive_parse(api, soup.contents, MarkdownContext(), None)
+    return BeautifulSoup(md, 'html.parser')
 
 
 class MarkdownContext:
@@ -127,29 +136,29 @@ class MarkdownContext:
     def get(self, idx=None):
         if idx:
             return self._arr[idx - 1]
-        return {x: '' for x in self._arr if x is not None}
+        return {x: None for x in self._arr if x is not None}
 
 
-def _recursive_parse(api, tags, ctx, parent=None):
-    # import pdb
-    # pdb.set_trace()
+def _recursive_parse(tags, ctx, parent=None):
+    """Parse a :class:``bs4.BeautifulSoup`` document into a stream of (parent,
+    node, attributes) tuples."""
     last = None
     for t in tags:
         if isinstance(t, bs4.element.NavigableString):
             if t.string == '\n':
                 continue
             _print_update('ADD', parent, t)
-            last = _add_markdown_node(api, t, ctx, parent)
+            yield (parent.string if parent else None, t.string, ctx.get())
+            last = t
         elif t.name.startswith('h'):  # Save as tag
-            # _print_update('CONTEXT', parent, t)
             idx = int(t.name[1:])  # Extract header depth from tag
             ctx.insert(idx,  t.string)
         elif t.name == 'ul' or t.name == 'ol':
             _print_update('RECUR', parent, t)
-            _recursive_parse(api, t.children, ctx, last)
+            yield from _recursive_parse(t.children, ctx, last)
         elif t.name == 'li':
             _print_update('RECUR', parent, t)
-            _recursive_parse(api, t.children, ctx, parent)
+            yield from _recursive_parse(t.children, ctx, parent)
         else:
             print("WARNING: tag=%s parent=%s" %
                   (t.name, parent.name if parent is not None else 'None'))
@@ -162,8 +171,14 @@ def _print_update(action, parent, tag):
         tag=tag))
 
 
-def _add_markdown_node(api, t, ctx, parent):
-    d = ctx.get()
-    d['name'] = t.string   # Override the 'name' attribute
-    # api.Node.add(parent, **d)
-    return t
+def _import_tuple_stream(api, stream):
+    """Converts a stream of tuples into nodes and edges in the Graph, using the
+    API."""
+    d = {}  # Holds mapping of node names => ids
+    for parent, name, kwargs in stream:
+        p = d.get(parent, None)  # Convert parent name to node id
+        kwargs['name'] = name
+        if name in d:
+            logger.warning("%s already seen in stream; will be overwritten",
+                           name)
+        d[name] = api.Node.add(p, **kwargs)
