@@ -64,140 +64,127 @@ def test_parse_link_args():
         assert case.out == obs
 
 
-__test_markdown = {
-    '1-level': """
-               * t1
-                 * t11
-               """,
-    '3-level': """
-               * t1
-                * t11
-                * t12
-                  * t121
-               """,
-    'complex': """
-               Header 1
-               ========
-               ## Header 2
+MarkdownTestCase = namedtuple('MarkdownTestCase',
+                              ['name', 'markdown', 'tuples', 'nodes', 'edges'])
+__markdownTestCases = (
+    MarkdownTestCase(
+        name='1-level',
+        markdown="""
+        * t1
+          * t11
+        """,
+        tuples=(
+            (None, 't1', {}),
+            ('t1', 't11', {})
+        ),
+        nodes=(
+            (0, 't1'),  # (uid, name)
+            (1, 't11'),
+        ),
+        edges=(
+            (0, 1),  # (src, dest)
+        )
+    ),
+    MarkdownTestCase(
+        name='3-level',
+        markdown="""
+                 * t1
+                  * t11
+                  * t12
+                    * t121
+                 """,
+        tuples=(
+            (None, 't1', {}),
+            ('t1', 't11', {}),
+            ('t1', 't12', {}),
+            ('t12', 't121', {}),
+        ),
+        nodes=(
+            (0, 't1'),
+            (1, 't11'),
+            (2, 't12'),
+            (3, 't121'),
+        ),
+        edges=(
+            (0, 1),
+            (0, 2),
+            (2, 3)
+        )
+    ),
+    MarkdownTestCase(
+        name='complex',
+        markdown="""
+                 Header 1
+                 ========
+                 ## Header 2
 
-               * t1
+                 * t1
 
-               ## Header 3
+                 ## Header 3
 
-               * t2
-                   * t21
-                       * t211
-                       * t212
-                   * t22
-               """,
-}
+                 * t2
+                     * t21
+                         * t211
+                         * t212
+                     * t22
+                 """,
+        tuples=(
+            (None, 't1', {'Header 1': None, 'Header 2': None}),
+            (None, 't2', {'Header 1': None, 'Header 3': None}),
+            ('t2', 't21', {'Header 1': None, 'Header 3': None}),
+            ('t21', 't211', {'Header 1': None, 'Header 3': None}),
+            ('t21', 't212', {'Header 1': None, 'Header 3': None}),
+            ('t2', 't22', {'Header 1': None, 'Header 3': None}),
+        ),
+        nodes=(
+            (0, 't1'),
+            (1, 't2'),
+            (2, 't21'),
+            (3, 't211'),
+            (4, 't212'),
+            (5, 't22')
+        ),
+        edges=(
+            (1, 2),
+            (2, 3),
+            (2, 4),
+            (1, 5)
+        )
+    )
+)
 
 
 def test_recursive_parse():
-    _TestCase = namedtuple('_TestCase', ['markdown', 'expected'])
-    testcases = (
-        _TestCase(
-            __test_markdown['1-level'],
-            (
-                (None, 't1', {}),
-                ('t1', 't11', {})
-            )
-        ),
-        _TestCase(
-            __test_markdown['3-level'],
-            (
-                (None, 't1', {}),
-                ('t1', 't11', {}),
-                ('t1', 't12', {}),
-                ('t12', 't121', {}),
-            )
-        ),
-        _TestCase(
-            __test_markdown['complex'],
-            (
-                (None, 't1', {'Header 1': None, 'Header 2': None}),
-                (None, 't2', {'Header 1': None, 'Header 3': None}),
-                ('t2', 't21', {'Header 1': None, 'Header 3': None}),
-                ('t21', 't211', {'Header 1': None, 'Header 3': None}),
-                ('t21', 't212', {'Header 1': None, 'Header 3': None}),
-                ('t2', 't22', {'Header 1': None, 'Header 3': None}),
-            )
-        ),
-    )
-    for testcase in testcases:
+    for testcase in __markdownTestCases:
         s = textwrap.dedent(testcase.markdown).strip()
         soup = parse._markdown_to_soup(s)
         ctx = parse.MarkdownContext()
         stream = parse._recursive_parse(soup.contents, ctx)
-        for obs, exp in zip(stream, testcase.expected):
+        for obs, exp in zip(stream, testcase.tuples):
             # print("Comparing %s v. %s" % (str(obs), str(exp)))
             assert obs == exp
 
 
 def test_import_tuple_stream():
-    _TestCase = namedtuple('_TestCase', ['tuples', 'nodes', 'edges'])
-    testcases = (
-        _TestCase(
-            (
-                (None, 't1', {}),
-                ('t1', 't11', {})
-            ),
-            (
-                (0, 't1'),  # (uid, name)
-                (1, 't11'),
-            ),
-            (
-                (0, 1),  # (src, dest)
-            )
-        ),
-        _TestCase(
-            (
-                (None, 't1', {}),
-                ('t1', 't11', {}),
-                ('t1', 't12', {}),
-                ('t12', 't121', {}),
-            ),
-            (
-                (0, 't1'),
-                (1, 't11'),
-                (2, 't12'),
-                (3, 't121'),
-            ),
-            (
-                (0, 1),
-                (0, 2),
-                (2, 3)
-            )
-        ),
-        _TestCase(
-            (
-                (None, 't1', {'Header 1': None, 'Header 2': None}),
-                (None, 't2', {'Header 1': None, 'Header 3': None}),
-                ('t2', 't21', {'Header 1': None, 'Header 3': None}),
-                ('t21', 't211', {'Header 1': None, 'Header 3': None}),
-                ('t21', 't212', {'Header 1': None, 'Header 3': None}),
-                ('t2', 't22', {'Header 1': None, 'Header 3': None}),
-            ),
-            (
-                (0, 't1'),
-                (1, 't2'),
-                (2, 't21'),
-                (3, 't211'),
-                (4, 't212'),
-                (5, 't22')
-            ),
-            (
-                (1, 2),
-                (2, 3),
-                (2, 4),
-                (1, 5)
-            )
-        )
-    )
-    for testcase in testcases:
+    for testcase in __markdownTestCases:
         G = nx.DiGraph()
         api = fileapi.FileAPI(G)
         parse._import_tuple_stream(api, testcase.tuples)
+        for uid, name in testcase.nodes:
+            assert uid in G
+            assert G.node[uid]['name'] == name
+        for src, dest in testcase.edges:
+            assert src in G
+            assert dest in G.edge[src]
+
+
+def test_import_markdown():
+    """Component test that black-boxes the subroutines."""
+    for testcase in __markdownTestCases:
+        G = nx.DiGraph()
+        api = fileapi.FileAPI(G)
+        s = textwrap.dedent(testcase.markdown).strip()
+        parse.import_markdown(api, s)
         for uid, name in testcase.nodes:
             assert uid in G
             assert G.node[uid]['name'] == name

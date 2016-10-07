@@ -95,7 +95,7 @@ def import_markdown(api, s):
     hierarchy. Headers are attached to all following nodes as tags.
     """
     soup = _markdown_to_soup(s)
-    stream = _recursive_parse(api, soup.contents, MarkdownContext(), None)
+    stream = _recursive_parse(soup.contents, MarkdownContext())
     _import_tuple_stream(api, stream)
 
 
