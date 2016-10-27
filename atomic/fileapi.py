@@ -54,8 +54,18 @@ class FileNodeAPI(api.NodeAPISpec):
         return idx
 
     def update(self, idx, **kwargs):
-        """Update item attributes."""
+        """Update an item in-place."""
         self.G.node[idx] = {**self.G.node[idx], **kwargs}
+        graph.save(self.G)
+
+    def patch(self, idx, *args, **kwargs):
+        """Modify item attributes."""
+        node = self.G.node[idx]
+        for k, v in kwargs.items():
+            if v is None:
+                del node[k]
+            else:
+                node[k] = v
         graph.save(self.G)
 
     def delete(self, idx):

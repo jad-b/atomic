@@ -26,14 +26,14 @@ def test_parse_key_values():
     TestData = namedtuple('TestData', ['input', 'out'])
     testcases = (
         TestData('', {}),
-        TestData('body=', {'body': None}),
-        TestData('body= cats=two', {'body': None, 'cats': 'two'}),
+        TestData('body=', {'body': ''}),
+        TestData('body= cats=two', {'body': '', 'cats': 'two'}),
         TestData("body=I don't know what to do with my hands",
                  {'body': "I don't know what to do with my hands"}),
         TestData("line1=I think line2=My fear's come true",
                  {'line1': 'I think', 'line2': "My fear's come true"}),
         TestData("tag1= key1=value1 tag2=",
-                 {'tag1': None, 'tag2': None, 'key1': 'value1'}),
+                 {'tag1': '', 'tag2': '', 'key1': 'value1'}),
     )
     for case in testcases:
         obs = parse.parse_key_values(case.input)

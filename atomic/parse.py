@@ -26,13 +26,7 @@ logger = get_logger('atomic')
 
 def parse_key_values(s):
     """Parse key-value pairs from 'key1=string key2=multi-word string ...'"""
-
-    def nullify(s):
-        if s == '':
-            return None
-        return s
-
-    return {m.group(1): nullify(m.group(2))
+    return {m.group(1): m.group(2)
             for m in PARSE_KEY_VALUE_RE.finditer(s)}
 
 

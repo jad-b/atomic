@@ -30,12 +30,26 @@ class NodeAPISpec(metaclass=ABCMeta):
 
     @abstractmethod
     def update(self, uid, **kwargs):
-        """Update a node's attributes."""
+        """Update a node in-place."""
         pass
 
     @abstractmethod
     def delete(self, uid):
         """Delete a node from the graph."""
+        pass
+
+    def patch(self, uid, *args, **kwargs):
+        """Modify properties of a node.
+
+        Arguments:
+            args (list[dict]): Array of dictionaries containing patch
+                instructions in `RFC 6902`_ format.
+            kwargs (dict): Key-value pairs in JSON merge patch format
+                (`RFC 7386`_).
+
+        .. _RFC 6902: https://tools.ietf.org/html/rfc6902
+        .. _RFC 7386: https://tools.ietf.org/html/rfc7386
+        """
         pass
 
 
