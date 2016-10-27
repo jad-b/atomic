@@ -7,12 +7,12 @@ Command line interface.
 """
 import argparse
 
-from atomic import fileapi, log, display, graph, parse
+from atomic import fileapi, log, graph, client
 
 logger = log.get_logger('cli')
 
 
-def add_arguments(parser, api):
+def add_arguments(parser, client):
     # Sub-commands
     subs = parser.add_subparsers(help='sub-command help', dest='command')
 
@@ -21,23 +21,13 @@ def add_arguments(parser, api):
     # atomic list key=value
     # atomic list q=Lucene||Solr, haven't decided
     p_list = subs.add_parser('list', help='List nodes', aliases=['ls'])
-
-    def list_func(api, **kwargs):
-        logger.debug("Listing nodes")
-        print("Nodes:\n=====")
-        nodes = api.Node.get()  # Grab all nodes
-        display.print_tree(nodes)
-    p_list.set_defaults(func=list_func)
+    p_list.set_defaults(func=client.list)
 
     # Show
     # atomic show <nodeID>
     p_show = subs.add_parser('show', help='Show node')
     p_show.add_argument('index', help='Node to show', type=int)
-
-    def show_func(api, index, **kwargs):
-        n = api.Node.get(index)
-        display.print_node(index, n)
-    p_show.set_defaults(func=show_func)
+    p_show.set_defaults(func=client.show)
 
     # Add
     # atomic add
@@ -45,13 +35,7 @@ def add_arguments(parser, api):
                             aliases=['a'])
     p_add.add_argument('-p', '--parent', help='Parent node')
     p_add.add_argument('args', nargs='+', help='<Node name>... [key=value...]')
-
-    def add_func(api, args, parent=None, **kwargs):
-        line = ' '.join(args)  # Rejoin args for regex parsing
-        name = parse.parse_non_kv(line)
-        kwargs = parse.parse_key_values(line[len(name):])
-        api.Node.add(parent=parent, name=name, **kwargs)
-    p_add.set_defaults(func=add_func)
+    p_add.set_defaults(func=client.add)
 
     # Update
     # atomic update --replace node1 [key=value,...] --rm [key1 tag1 ...]
@@ -64,28 +48,14 @@ def add_arguments(parser, api):
                           nargs='+')
     p_update.add_argument('--replace', help='Replace the given Node',
                           action='store_true')
-
-    def update_func(api, index, args, remove=None, replace=False, **kwargs):
-        line = ' '.join(args)  # Rejoin args for regex parsing
-        kvs = parse.parse_key_values(line)
-        if replace:
-            api.Node.update(index, **kvs)
-        else:  # Assemble patch
-            if remove is not None:
-                for prop in remove:
-                    kvs[prop] = None
-            api.Node.patch(index, **kvs)
-    p_update.set_defaults(func=update_func)
+    p_update.set_defaults(func=client.update)
 
     # Delete
     # atomic delete node1
     p_delete = subs.add_parser('delete', help='Delete a node from the graph',
                                aliases=['d'])
     p_delete.add_argument('index', help='Index to remove', type=int)
-
-    def delete_func(api, index=-1, **kwargs):
-        api.Node.delete(index)
-    p_delete.set_defaults(func=delete_func)
+    p_delete.set_defaults(func=client.delete)
 
     # Link
     # atomic link node1 node2 parent [key=value,...]
@@ -99,20 +69,13 @@ def add_arguments(parser, api):
                         default=graph.RELATED)
     p_link.add_argument('kvs', nargs='*', help='key=value...')
     p_link.add_argument('-d', '--delete', help='Delete the link')
-
-    def link_func(api, src, dest, type, kvs=None, *args, **kwargs):
-        if kvs is not None:
-            key_values = parse.parse_key_values(' '.join(kvs))
-        else:
-            key_values = {}
-        api.Edge.add(src, dest, type_=type, **key_values)
-    p_link.set_defaults(func=link_func)
+    p_link.set_defaults(func=client.link)
 
 
-def new_parser(api):
+def new_parser(api_client):
     """Create a new argument parser."""
     parser = argparse.ArgumentParser()
-    add_arguments(parser, api)
+    add_arguments(parser, api_client)
     return parser
 
 
@@ -126,7 +89,8 @@ def process(parser, api, args=None):
 
 def main():
     api = fileapi.FileAPI()
-    parser = new_parser(api)
+    api_client = client.ApiClient(api)
+    parser = new_parser(api_client)
     from atomic import shell  # Prevents circular dependency
     parser.set_defaults(func=shell.Valence.run)
     process(parser, api)
