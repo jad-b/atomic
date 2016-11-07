@@ -15,11 +15,14 @@
     - [x] Import tuples in through the API
     - [x] Test Markdown => Graph.
 * [?] Distinguish between setting a tag and deleting a key = value with "key=''"
-    - Tags are KVs with an empty value. This may be stored as Null on the backend.
+    - Tags are KVs with an empty value.
+    - Sending `{'tagOrKeyName': None}` indicates deletion requested.
     - Tags are set by '<Name>=' on the CLI
     - `atomic update [--replace] <name> <key=values>... [--rm [k1 t1 k2]...]`
 * [ ] Search by attributes
-* [ ] Filter returned attributes
+    - Nail down CRUD ops w/ tests
+    - Implement DFS & BFS search
+    * [ ] Filter returned attributes
 * [?] Refactor into packages
     - photon/frontend: what you see; CLI, Shell
     - darkmatter/backend: how you store data; Persistence backends

@@ -31,7 +31,7 @@ class FileNodeAPI(api.NodeAPISpec):
         serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 0 else 0
         self.serial = serial.Serial(serial_idx)
 
-    def get(self, idx=None):
+    def get(self, idx=None, **kwargs):
         """Retrieve an item by index (uuid)."""
         if idx is None:
             self.logger.debug("Retrieving all nodes")

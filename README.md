@@ -13,3 +13,34 @@ Does a node, by any other name, make more sense to a lay-person?
 - __object__: a material thing that can be seen and touched
 
 "Thing" may be a winner.
+
+
+## Interfaces
+At its heart, `atomic` is a standard API for graph operations. What makes
+it different from libraries like `networkx`, which it uses to represent the
+graph in memory, is its ability to implement this API
+across different data stores, as well as a building - block approach to adding
+features. The latter means that higher - level operations, like search algorithms,
+are built atop of primitive operations, like retrieve, update, and delete. Thus,
+you only have to re - implement the lowest - level API to take advantage of
+higher - level functionality, albeit naively.
+
+## Layout
+```
+* api
+    * spec
+    * file
+    * postgres
+    * http
+* client
+    * cli
+    * shell
+* graph
+    * node
+    * serial
+    * algo
+* utils
+    * display
+    * log
+    * parse
+```

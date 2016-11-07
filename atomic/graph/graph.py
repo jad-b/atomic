@@ -68,7 +68,7 @@ def hierarchy(G):
 class Node:
     """Nodes are the fundamental Graph primitive."""
 
-    def __init__(self, uid, *args, **kwargs):
+    def __init__(self, uid: int, *args, **kwargs):
         self.uid = uid
         for k, v in kwargs.items():
             setattr(self, k, v)
@@ -76,10 +76,11 @@ class Node:
     def to_json(self):
         return self.__dict__
 
-    def __str__(self):
-        return "{:d}) {:s}".format(self.uid, getattr(self, 'name', self.uid))
+    def __str__(self) -> str:
+        return "{:d}) {:s}".format(self.uid,
+                                   getattr(self, 'name', str(self.uid)))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         sio = StringIO()
         header = '[{:d}] {:s}'.format(
             self.uid, getattr(self, 'name', '<No Name>'))
