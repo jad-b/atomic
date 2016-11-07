@@ -3,7 +3,8 @@ from collections import namedtuple
 
 import networkx as nx
 
-from atomic import parse, fileapi
+from atomic.utils import parse
+from atomic.darkmatter import fileapi
 
 
 def test_time_parsing():

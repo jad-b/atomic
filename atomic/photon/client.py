@@ -1,4 +1,4 @@
-from atomic import log, display, parse
+from atomic.utils import log, display, parse
 
 
 class ApiClient:

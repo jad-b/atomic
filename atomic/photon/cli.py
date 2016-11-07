@@ -7,7 +7,10 @@ Command line interface.
 """
 import argparse
 
-from atomic import fileapi, log, graph, client
+from atomic.darkmatter import fileapi
+from atomic.graph import graph
+from atomic.photon import client
+from atomic.utils import log
 
 logger = log.get_logger('cli')
 

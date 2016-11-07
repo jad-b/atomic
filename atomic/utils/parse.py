@@ -11,7 +11,7 @@ import bs4
 import mistune
 from bs4 import BeautifulSoup
 
-from atomic.log import get_logger
+from atomic.utils.log import get_logger
 
 
 # key1=string key2=multi-word string...

@@ -11,7 +11,7 @@ from collections import deque
 import networkx as nx
 from networkx.readwrite import json_graph
 
-from atomic import log
+from atomic.utils import log
 
 
 DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')

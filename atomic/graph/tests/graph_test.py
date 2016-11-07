@@ -1,7 +1,7 @@
 import pytest
 import networkx as nx
 
-from atomic import graph
+from atomic.graph import graph
 
 
 @pytest.fixture

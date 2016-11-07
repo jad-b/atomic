@@ -5,7 +5,9 @@ API implementation for using a local file as the data store.
 from colorama import Fore, Style
 import networkx as nx
 
-from atomic import api, graph, serial, log
+from atomic.darkmatter import api
+from atomic.graph import graph, serial
+from atomic.utils import log
 
 
 class FileAPI:

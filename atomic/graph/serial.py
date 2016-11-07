@@ -1,4 +1,4 @@
-from atomic import log
+from atomic.utils import log
 
 
 class Serial:

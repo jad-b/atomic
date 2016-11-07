@@ -6,7 +6,8 @@ import sys
 import traceback
 from importlib import reload
 
-from atomic import cli, log, parse
+from atomic.photon import cli
+from atomic.utils import log, parse
 
 
 class ShlexMixin:
