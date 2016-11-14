@@ -6,6 +6,7 @@ from colorama import Fore, Style
 import networkx as nx
 
 from atomic.darkmatter import api
+from atomic.errors import AtomicError
 from atomic.graph import graph, serial
 from atomic.utils import log
 
@@ -39,7 +40,7 @@ class FileNodeAPI(api.NodeAPISpec):
             self.logger.debug("Retrieving all nodes")
             return graph.hierarchy(self.G)
         self.logger.debug("Retrieving node w/ id=%d", idx)
-        return self.G.node.get(idx, {})
+        return self.G.node.get(idx)
 
     def create(self, parent=None, **kwargs):
         idx = self.serial.index
@@ -131,23 +132,37 @@ class FileEdgeAPI(api.EdgeAPISpec):
         self.G = G
         self.logger = logger
 
-    def get(self, src: int, dest: int, **kwargs):
-        """Retrieve an edge by id or source & destination."""
-        if kwargs is None:  # Single item retrieval
-            return self.G.edge[src][dest]
+    def get(self, src: int, dst: int, **kwargs):
+        """Retrieve an edge by id or source & dstination."""
+        if kwargs == {}:  # Single item retrieval
+            try:
+                return self.G.edge[src][dst]
+            except KeyError:
+                return None
 
-    def add(self, src: int, dest: int, type_, **kwargs):
+    def create(self, src: int, dst: int,
+               type=graph.EdgeTypes.related.name, **kwargs):
         """Add an edge to the Graph."""
-        self.logger.debug("Adding edge between %d => %d", src, dest)
-        self.G.add_edge(src, dest, type=type_, **kwargs)
+        try:
+            self.G.node[src]
+            self.G.node[dst]
+        except KeyError:
+            raise AtomicError(
+                "Cannot create Edge (%d, %d); nodes not found" % (src, dst))
+        self.logger.debug("Adding edge between %d => %d", src, dst)
+        data = dict(kwargs)
+        data['src'] = src
+        data['dst'] = dst
+        data['type'] = type
+        self.G.add_edge(src, dst, **data)
         graph.save(self.G)
 
-    def update(self, src, dest, **kwargs):
+    def update(self, src, dst, **kwargs):
         """Update an edge's attributes."""
-        self.G.edge[src][dest] = {**self.G.edge[src][dest], **kwargs}
+        self.G.edge[src][dst] = {**self.G.edge[src][dst], **kwargs}
         graph.save(self.G)
 
-    def delete(self, src, dest, **kwargs):
+    def delete(self, src, dst, **kwargs):
         """Delete an edge from the graph."""
-        self.G.remove_edge(src, dest)
+        self.G.remove_edge(src, dst)
         graph.save(self.G)

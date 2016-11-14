@@ -67,8 +67,11 @@ class EdgeAPISpec(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def add(self, src, dest, type_, **kwargs):
-        """Add an edge to the Graph."""
+    def create(self, src, dest, type_=None, **kwargs):
+        """Add an edge to the Graph.
+
+        The ``type_`` argument should be provided a sane default.
+        """
         pass
 
     @abstractmethod

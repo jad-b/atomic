@@ -3,6 +3,7 @@
 graph
 =====
 """
+import enum
 import json
 import os
 from io import StringIO
@@ -16,10 +17,11 @@ from atomic.utils import log
 
 DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')
 
-# Edge Types
-PARENT = "parent_of"
-RELATED = "related_to"
-PRECEDES = "precedes"
+
+class EdgeTypes(enum.Enum):
+    parent = "parent_of"
+    related = "related_to"
+    precedes = "precedes"
 
 logger = log.get_logger('graph')
 
@@ -60,7 +62,7 @@ def hierarchy(G):
         for src, dest in nx.dfs_edges(G, source=root):
             while len(dq) > 0 and dq[-1] != src:
                 dq.pop()  # Unwind the stack
-            if G.edge[src][dest].get('type') == PARENT:
+            if G.edge[src][dest].get('type') == EdgeTypes.PARENT:
                 yield Node(dest, **G.node[dest]), len(dq)
             dq.append(dest)
 
@@ -111,6 +113,20 @@ class Node:
         if isinstance(o, Node):
             return (self.uid == o.uid)
         raise NotImplemented
+
+
+class Edge:
+
+    def __init__(self, src, dst, _type, **kwargs):
+        self.src = src
+        self.dst = dst
+        self._type = _type
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+    @classmethod
+    def from_json(cls, json_object):
+        return cls(**json_object)
 
 
 class Thought(Node):

@@ -21,5 +21,5 @@ def G():
         (2, 5),
         (5, 6),
         (5, 7)
-    ], type=graph.PARENT)
+    ], type=graph.EdgeTypes.parent.name)
     yield sample_graph
