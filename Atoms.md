@@ -41,15 +41,3 @@ __Parents?__ It'd make sense that multiple things could depend on the same sub-u
 atoms, all parents are already dynamic.
 __Linkages__ Could be another set of tags with a really-long-and-human-unfriendly-naming scheme. Or you deal with the cascading CRUD operations - DB much?
 __Priority__ A relation stronger than tags, because it allows for sorting.
-
-
-## Implementation
-
-Obviously, this data could be well represented by a RDBMS.
-
-However, dealing with m2m linking tables is more work than I want right now.
-Instead, I will attempt to deal with it solely in Python, and DB it later.
-
-All nodes will be stored in a B-Tree backed list, provided by the `blist`
-library.
-

@@ -1,18 +1,21 @@
 atomic
 =====
+Complexity divided.
 
-Does a node, by any other name, make more sense to a lay-person?
+## What it has/can do
+* Provide a modular API for interacting with graphs, which can be extended for
+  _any_ custom backend.
+  same graph.
+* Maintain a data model as arbitrary as JSON, or defined as a Python class.
+* "Walk" your graph with custom operations.
+* Built-in notions of sequencing & hierarchy, w/ common operations on such
+  provided.
 
-- __node__: a point at which lines or pathways intersect or branch; a central or connecting point
-- __item__: an individual article or unit, especially one that is part of a list, collection, or
-  set
-- __thing__:
-    - an object that one need not, cannot, or does not wish to give a specific name to.
-    - *an action, activity, event, thought, or utterance*
-    - used euphemistically to refer to a man's penis.
-- __object__: a material thing that can be seen and touched
-
-"Thing" may be a winner.
+## What I Want It To Do
+* Event-driven architecture makes it easy for multiple actors to work on the
+* Partition your graph across distributed backends.
+* Supports the interaction of separate graphs
+* "Optimistic" asynchronous indexing speeds up writes & reads.
 
 
 ## Interfaces
@@ -25,22 +28,35 @@ are built atop of primitive operations, like retrieve, update, and delete. Thus,
 you only have to re - implement the lowest - level API to take advantage of
 higher - level functionality, albeit naively.
 
-## Layout
-```
-* api
-    * spec
-    * file
-    * postgres
-    * http
-* client
-    * cli
-    * shell
-* graph
-    * node
-    * serial
-    * algo
-* utils
-    * display
-    * log
-    * parse
-```
+## Extending the Model
+In Atomic, all  a nodes or edge _has_ to have is a unique identifier. Beyond
+that ID, it's an arbitrary flat collection of key-value pairs. However, Nodes
+and Edges commonly represent something in the real world, with specific values
+and behaviors that are much richer than bags of key-values. That's why the Node and Edge
+classes are supplied. While these classes simply set the keys and ID as attributes,
+they provide a starting point for inheritance or composition to provide
+"gradual" schema enforcement. With this, representing a ToDo item is easy;
+subclass Node, set required attributes as arguments in `__init__`, and you're
+not free to add methods and schema validation as you wish. As long your object can
+become JSON when `to_json` is called, you maintain compatibility.
+
+
+## Terminology
+Since we're dealing with graphs, we have nodes and edges. A Node is a vertice
+within the graph, and commonly represents a noun, but can also be used to
+represent actions. An Edge is a relationship between two Nodes, and can also be
+made to represent an action.
+
+### On the Word "Node"
+Does a node, by any other name, make more sense to a lay-person?
+
+- __node__: a point at which lines or pathways intersect or branch; a central or connecting point
+- __item__: an individual article or unit, especially one that is part of a list, collection, or
+  set
+- __thing__:
+    - an object that one need not, cannot, or does not wish to give a specific name to.
+    - *an action, activity, event, thought, or utterance*
+    - used euphemistically to refer to a man's penis.
+- __object__: a material thing that can be seen and touched
+
+"Thing" may be a winner.

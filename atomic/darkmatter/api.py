@@ -24,7 +24,7 @@ class NodeAPISpec(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def add(self, parent=None, **kwargs):
+    def create(self, parent=None, **kwargs):
         """Add a node to the Graph."""
         pass
 

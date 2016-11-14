@@ -1,28 +1,4 @@
-import pytest
-import networkx as nx
-
-from atomic.graph import graph
-
-
-@pytest.fixture
-def G():
-    """
-       a      # 0
-     b   c    # 1
-    d e   f   # 2
-         g h  # 3
-    """
-    sample_graph = nx.DiGraph()
-    sample_graph.add_edges_from([
-        ('a', 'b'),
-        ('a', 'c'),
-        ('b', 'd'),
-        ('b', 'e'),
-        ('c', 'f'),
-        ('f', 'g'),
-        ('f', 'h')
-    ], type=graph.PARENT)
-    yield sample_graph
+from atomic import graph
 
 
 def test_dfs_depth(G):

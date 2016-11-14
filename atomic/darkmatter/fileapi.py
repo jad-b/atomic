@@ -39,9 +39,9 @@ class FileNodeAPI(api.NodeAPISpec):
             self.logger.debug("Retrieving all nodes")
             return graph.hierarchy(self.G)
         self.logger.debug("Retrieving node w/ id=%d", idx)
-        return self.G.node[idx]
+        return self.G.node.get(idx, {})
 
-    def add(self, parent=None, **kwargs):
+    def create(self, parent=None, **kwargs):
         idx = self.serial.index
         self.logger.debug("Node.add: idx=%d kwargs=%s", idx, kwargs)
         self.G.add_node(idx, attr_dict=kwargs)  # Create node
