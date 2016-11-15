@@ -2,6 +2,8 @@
 """
 API implementation for using a local file as the data store.
 """
+import atexit
+
 from colorama import Fore, Style
 import networkx as nx
 
@@ -14,14 +16,14 @@ from atomic.utils import log
 class FileAPI:
     """File-system backed implementation of the API."""
 
-    def __init__(self, G=None):
+    def __init__(self, G=None, graphfile=graph.DEFAULT_FILENAME):
         self.logger = log.get_logger('api')
         self.G = G if G is not None else graph.load()
+        self.graphfile = graphfile
         self.Node = FileNodeAPI(self.G, self.logger)
         self.Edge = FileEdgeAPI(self.G, self.logger)
-
-    def save(self):
-        graph.save(self.G)
+        # Save the graph before closing
+        atexit.register(graph.save, self.G, self.graphfile)
 
 
 class FileNodeAPI(api.NodeAPISpec):
@@ -31,7 +33,7 @@ class FileNodeAPI(api.NodeAPISpec):
         self.logger = logger
         self.G = G
         # Find the highest valued node
-        serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 0 else 0
+        serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 1 else 1
         self.serial = serial.Serial(serial_idx)
 
     def get(self, idx=None, **kwargs):
@@ -44,8 +46,9 @@ class FileNodeAPI(api.NodeAPISpec):
 
     def create(self, parent=None, **kwargs):
         idx = self.serial.index
+        kwargs['uid'] = idx
         self.logger.debug("Node.add: idx=%d kwargs=%s", idx, kwargs)
-        self.G.add_node(idx, attr_dict=kwargs)  # Create node
+        self.G.add_node(idx, attr_dict=kwargs)
         if parent is not None:
             p = int(parent)
             if self.G.node.get(p) is None:

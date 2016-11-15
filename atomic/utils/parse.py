@@ -182,4 +182,4 @@ def _import_tuple_stream(api, stream):
         if name in d:
             logger.warning("%s already seen in stream; will be overwritten",
                            name)
-        d[name] = api.Node.add(p, **kwargs)
+        d[name] = api.Node.create(p, **kwargs)

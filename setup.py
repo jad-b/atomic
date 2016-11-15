@@ -31,7 +31,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'atomic=atomic.cli:main',
+            'atomic=atomic.photon.cli:main',
         ]
     },
     zip_safe=False,

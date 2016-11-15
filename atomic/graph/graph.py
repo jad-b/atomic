@@ -2,6 +2,7 @@
 """
 graph
 =====
+Operations on the in-memory graph representation.
 """
 import enum
 import json
@@ -40,7 +41,16 @@ def load(filename=DEFAULT_FILENAME):
 
 
 def save(G, filename=DEFAULT_FILENAME):
-    """Save the persisted :class:`networkx.MultiDiGraph`."""
+    """Save the persisted :class:`networkx.MultiDiGraph`.
+
+    Arguments:
+        G (:class:`~networkx.classes.digraph.DiGraph`): Graph to save.
+        filename (str): Name of file to save graph to. If None, this is a
+            no-op, which is useful for testing and any other time the graph is
+            only required to be in-memory.
+    """
+    if filename is None:
+        return
     with open(filename, 'w') as f:
         data = json_graph.node_link_data(G)
         json.dump(data, f, indent=2)
@@ -79,10 +89,6 @@ class Node:
         return self.__dict__
 
     def __str__(self) -> str:
-        return "{:d}) {:s}".format(self.uid,
-                                   getattr(self, 'name', str(self.uid)))
-
-    def __repr__(self) -> str:
         sio = StringIO()
         header = '[{:d}] {:s}'.format(
             self.uid, getattr(self, 'name', '<No Name>'))
@@ -92,6 +98,10 @@ class Node:
                 continue
             sio.write('  {key}: {value}\n'.format(key=k, value=v))
         return sio.getvalue().rstrip('\n')
+
+    def __repr__(self) -> str:
+        return "{:d}) {:s}".format(self.uid,
+                                   getattr(self, 'name', str(self.uid)))
 
     @classmethod
     def from_json(cls, json_object):
