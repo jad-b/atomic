@@ -16,16 +16,22 @@ from atomic.utils import log, display, parse
 
 
 class Reactor:
-    """Reactor provides a CLI and a customized API client."""
+    """Reactor provides a CLI and a customized API client.
 
-    def __init__(self, api, file=sys.stdout):
+    The implementation is broken into two parts: configuring the parser w/
+    subcommands, and the functions invoked by those subcommands. Invoked
+    function will be passed *all* parsed arguments through **kwargs, allowing
+    for named arguments, either positional or keyword, to be specified.
+    """
+
+    def __init__(self, api, out=sys.stdout):
         """Initialize a Recator instance.
 
         No action is taken until :meth:`~.Reactor.setup` is invoked.
 
         Arguments:
             api: Backing API.
-            file (:obj:file): File-like object; defaults to :attr:`sys.stdout`.
+            out (:obj:file): File-like object; defaults to :attr:`sys.stdout`.
 
         Attributes:
             api: Backing API.
@@ -35,7 +41,7 @@ class Reactor:
         """
         self.api = api
         self.logger = log.get_logger('cli')
-        self.file = file
+        self.out = out
 
     def setup(self):
         """Create a new argument parser.
@@ -47,12 +53,13 @@ class Reactor:
                 instantiation and setup in one line.
         """
         self.parser = argparse.ArgumentParser()
-        subp = self.parser.add_subparsers(
+        subparsers = self.parser.add_subparsers(
             help='sub-command help', dest='command')
         # Hook up subcommands
-        for name, method in inspect.getmembers(self,
-                                               predicate=inspect.ismethod):
-            method(subp)
+        for name, method in inspect.getmembers(
+                self, predicate=inspect.ismethod):
+            if name.endswith('cmd'):
+                method(subparsers)
         return self
 
     def process(self, args=None):
@@ -83,7 +90,7 @@ class Reactor:
         """Add a node to the graph.
 
         Examples:
-            atomic add [-p <parent>] key1=value1 tag1=
+            atomic add [-p <parent>] <name> key1=value1 tag1=
         """
         p_add = subparser.add_parser('add', help='Add a node to the graph.',
                                      aliases=['a'])
@@ -196,15 +203,16 @@ class Reactor:
         p_link.add_argument('src', help='Starting node', type=int)
         p_link.add_argument('dest', help='Destination node', type=int)
         p_link.add_argument('type', help='Relationship type',
-                            choices=[graph.PARENT,
-                                     graph.RELATED, graph.PRECEDES],
-                            default=graph.RELATED)
+                            choices=[graph.EdgeTypes.parent,
+                                     graph.EdgeTypes.related,
+                                     graph.EdgeTypes.precedes],
+                            default=graph.EdgeTypes.related)
         p_link.add_argument('kvs', nargs='*', help='key=value...')
         p_link.add_argument('-d', '--delete', help='Delete the link')
         p_link.set_defaults(func=self.link)
 
     def _print(self, *args, **kwargs):
-        print(*args, file=self.file, **kwargs)
+        print(*args, file=self.out, **kwargs)
 
 
 def main():
