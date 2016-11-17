@@ -9,6 +9,14 @@ from atomic.darkmatter import fileapi
 from atomic.photon import cli
 
 
+def assert_dict_in_dict(a, b):
+    """Assert dict A is within dict B."""
+    assert isinstance(a, dict) and isinstance(b, dict)
+    for k, v in a.items():
+        assert k in b
+        assert a[k] == b[k]
+
+
 class ReactorTestCase(unittest.TestCase):
     """Tests for the CLI and embedded client functions.
 
@@ -69,8 +77,6 @@ class ReactorTestCase(unittest.TestCase):
                             self.reactor.process(tc.args)
                             assert fn.call_count == 1  # called once
                             _, kw = fn.call_args  # kwargs
-                            for k, v in tc.funcargs.items():
-                                assert k in kw
-                                assert kw[k] == v
+                            assert_dict_in_dict(tc.funcargs, kw)
                         except SystemExit as e:  # Catches SystemExit
                             self.fail("Parser choked: " % e)
