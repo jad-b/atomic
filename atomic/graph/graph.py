@@ -5,56 +5,16 @@ graph
 Operations on the in-memory graph representation.
 """
 import enum
-import json
-import os
 from io import StringIO
 from collections import deque
 
 import networkx as nx
-from networkx.readwrite import json_graph
-
-from atomic.utils import log
-
-
-DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')
 
 
 class EdgeTypes(enum.Enum):
     parent = "parent_of"
     related = "related_to"
     precedes = "precedes"
-
-logger = log.get_logger('graph')
-
-
-def load(filename=DEFAULT_FILENAME):
-    """Load the persisted :class:`networkx.MultiDiGraph`."""
-    try:
-        with open(filename) as f:
-            data = json.load(f)
-            logger.debug("Loaded %s", filename)
-            return json_graph.node_link_graph(data, directed=True,
-                                              multigraph=False)
-    except FileNotFoundError:
-        logger.debug("No graph file found; instantiating")
-        return nx.DiGraph()
-
-
-def save(G, filename=DEFAULT_FILENAME):
-    """Save the persisted :class:`networkx.MultiDiGraph`.
-
-    Arguments:
-        G (:class:`~networkx.classes.digraph.DiGraph`): Graph to save.
-        filename (str): Name of file to save graph to. If None, this is a
-            no-op, which is useful for testing and any other time the graph is
-            only required to be in-memory.
-    """
-    if filename is None:
-        return
-    with open(filename, 'w') as f:
-        data = json_graph.node_link_data(G)
-        json.dump(data, f, indent=2)
-    logger.debug("Saved graph")
 
 
 def toplevel(G):

@@ -3,9 +3,13 @@
 API implementation for using a local file as the data store.
 """
 import atexit
+import json
+import os
+from functools import wraps
 
-from colorama import Fore, Style
 import networkx as nx
+from colorama import Fore, Style
+from networkx.readwrite import json_graph
 
 from atomic.darkmatter import api
 from atomic.errors import AtomicError
@@ -13,26 +17,77 @@ from atomic.graph import graph, serial
 from atomic.utils import log
 
 
+DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')
+
+_logger = log.get_logger('atomic')
+
+
+def persistent(f):
+    """Decorator that saves Graphs to disk after function execution."""
+    @wraps(f)
+    def wrapper(self, *args, **kw):
+        ret = None
+        try:
+            ret = f(self, *args, **kw)
+        except:
+            raise
+        if self.persist is not None:
+            _save(self.G, filename=self.persist)
+        return ret
+    return wrapper
+
+
+def _load(filename=DEFAULT_FILENAME):
+    """Load the persisted :class:`networkx.MultiDiGraph`."""
+    try:
+        with open(filename) as f:
+            data = json.load(f)
+            _logger.debug("Loaded %s", filename)
+            return json_graph.node_link_graph(data, directed=True,
+                                              multigraph=False)
+    except FileNotFoundError:
+        _logger.debug("No graph file found; instantiating")
+        return nx.DiGraph()
+
+
+def _save(G, filename=DEFAULT_FILENAME):
+    """Save the persisted :class:`networkx.MultiDiGraph`.
+
+    Arguments:
+        G (:class:`~networkx.classes.digraph.DiGraph`): Graph to save.
+        filename (str): Name of file to save graph to. If None, this is a
+            no-op, which is useful for testing and any other time the graph is
+            only required to be in-memory.
+    """
+    if filename is None:
+        return
+    with open(filename, 'w') as f:
+        data = json_graph.node_link_data(G)
+        json.dump(data, f, indent=2)
+    _logger.debug("Saved graph")
+
+
 class FileAPI:
     """File-system backed implementation of the API."""
 
-    def __init__(self, G=None, persist=False):
+    def __init__(self, G=None, persist=None):
         self.logger = log.get_logger('api')
-        self.G = G if G is not None else graph.load()
+        self.G = G if G is not None else _load(filename=persist)
         self.persist = persist
-        self.Node = FileNodeAPI(self.G, self.logger)
-        self.Edge = FileEdgeAPI(self.G, self.logger)
+        self.Node = FileNodeAPI(self.G, self.logger, persist=persist)
+        self.Edge = FileEdgeAPI(self.G, self.logger, persist=persist)
         # Save the graph before closing
         if persist:
-            atexit.register(graph.save, self.G, self.persist)
+            atexit.register(_save, self.G, self.persist)
 
 
 class FileNodeAPI(api.NodeAPISpec):
     """File-system backed implementation of the Node API."""
 
-    def __init__(self, G, logger):
+    def __init__(self, G, logger, persist=None):
         self.logger = logger
         self.G = G
+        self.persist = persist
         # Find the highest valued node
         serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 1 else 1
         self.serial = serial.Serial(serial_idx)
@@ -45,19 +100,20 @@ class FileNodeAPI(api.NodeAPISpec):
         self.logger.debug("Retrieving node w/ id=%d", idx)
         return self.G.node.get(idx)
 
+    @persistent
     def create(self, **kwargs):
         idx = self.serial.index
         kwargs['uid'] = idx
         self.logger.debug("Node.add: idx=%d kwargs=%s", idx, kwargs)
         self.G.add_node(idx, attr_dict=kwargs)
-        graph.save(self.G)
         return idx
 
+    @persistent
     def update(self, idx, **kwargs):
         """Update an item in-place."""
         self.G.node[idx] = {**self.G.node[idx], **kwargs}
-        graph.save(self.G)
 
+    @persistent
     def patch(self, idx, *args, **kwargs):
         """Modify item attributes."""
         node = self.G.node[idx]
@@ -66,13 +122,12 @@ class FileNodeAPI(api.NodeAPISpec):
                 del node[k]
             else:
                 node[k] = v
-        graph.save(self.G)
 
+    @persistent
     def delete(self, idx):
         """Remove a node from the graph."""
         try:
             self.G.remove_node(idx)
-            graph.save(self.G)
         except nx.exception.NetworkXError:
             return ValueError("{:d} wasn't found in the graph".format(idx))
 
@@ -125,9 +180,10 @@ class FileNodeAPI(api.NodeAPISpec):
 
 class FileEdgeAPI(api.EdgeAPISpec):
 
-    def __init__(self, G, logger):
+    def __init__(self, G, logger, persist=None):
         self.G = G
         self.logger = logger
+        self.persist = persist
 
     def get(self, src: int, dst: int, **kwargs):
         """Retrieve an edge by id or source & dstination."""
@@ -137,6 +193,7 @@ class FileEdgeAPI(api.EdgeAPISpec):
             except KeyError:
                 return None
 
+    @persistent
     def create(self, src: int, dst: int,
                type=graph.EdgeTypes.related.name, **kwargs):
         """Add an edge to the Graph."""
@@ -152,14 +209,13 @@ class FileEdgeAPI(api.EdgeAPISpec):
         data['dst'] = dst
         data['type'] = type
         self.G.add_edge(src, dst, **data)
-        graph.save(self.G)
 
+    @persistent
     def update(self, src, dst, **kwargs):
         """Update an edge's attributes."""
         self.G.edge[src][dst] = {**self.G.edge[src][dst], **kwargs}
-        graph.save(self.G)
 
+    @persistent
     def delete(self, src, dst, **kwargs):
         """Delete an edge from the graph."""
         self.G.remove_edge(src, dst)
-        graph.save(self.G)
