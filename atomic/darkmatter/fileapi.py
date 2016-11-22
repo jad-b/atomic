@@ -16,14 +16,15 @@ from atomic.utils import log
 class FileAPI:
     """File-system backed implementation of the API."""
 
-    def __init__(self, G=None, graphfile=graph.DEFAULT_FILENAME):
+    def __init__(self, G=None, persist=False):
         self.logger = log.get_logger('api')
         self.G = G if G is not None else graph.load()
-        self.graphfile = graphfile
+        self.persist = persist
         self.Node = FileNodeAPI(self.G, self.logger)
         self.Edge = FileEdgeAPI(self.G, self.logger)
         # Save the graph before closing
-        atexit.register(graph.save, self.G, self.graphfile)
+        if persist:
+            atexit.register(graph.save, self.G, self.persist)
 
 
 class FileNodeAPI(api.NodeAPISpec):
@@ -44,18 +45,11 @@ class FileNodeAPI(api.NodeAPISpec):
         self.logger.debug("Retrieving node w/ id=%d", idx)
         return self.G.node.get(idx)
 
-    def create(self, parent=None, **kwargs):
+    def create(self, **kwargs):
         idx = self.serial.index
         kwargs['uid'] = idx
         self.logger.debug("Node.add: idx=%d kwargs=%s", idx, kwargs)
         self.G.add_node(idx, attr_dict=kwargs)
-        if parent is not None:
-            p = int(parent)
-            if self.G.node.get(p) is None:
-                self.logger.warning("No parent node '%d' found", p)
-            else:
-                self.logger.debug("Linking to %s", parent)
-                self.G.add_edge(parent, idx, parent_of=True)  # Link to parent
         graph.save(self.G)
         return idx
 
@@ -151,7 +145,7 @@ class FileEdgeAPI(api.EdgeAPISpec):
             self.G.node[dst]
         except KeyError:
             raise AtomicError(
-                "Cannot create Edge (%d, %d); nodes not found" % (src, dst))
+                "Cannot create Edge (%d, %d); node(s) not found" % (src, dst))
         self.logger.debug("Adding edge between %d => %d", src, dst)
         data = dict(kwargs)
         data['src'] = src

@@ -92,19 +92,68 @@ class Reactor:
         Examples:
             atomic add [-p <parent>] <name> key1=value1 tag1=
         """
-        p_add = subparser.add_parser('add', help='Add a node to the graph.',
+        p_add = subparser.add_parser('add', help=self.add_cmd.__doc__,
                                      aliases=['a'])
-        p_add.add_argument('-p', '--parent', help='Parent node')
+        p_add.add_argument('-p', '--parent', help='Parent node', type=int)
         p_add.add_argument('args', nargs='+',
                            help='<Node name>... [key=value...]')
         p_add.set_defaults(func=self.add)
 
     def add(self, args, parent=None, **kwargs):
+        """Add a node to the graph.
+
+        Arguments:
+            args (list[str]): Strings to be interpreted as a name, followed by
+                any number of key=value or tag= pairs.
+            parent (int, optional): The ID of a node to link to as a parent.
+            **kwargs: Spillover keywords arguments from the passed
+                :class:`.argparse.Namespace` object.
+
+        Returns:
+            int: The id of the created node
+
+        Raises:
+            AtomicError: If the node can't be created, or the parent doesn't
+                exist.
+        """
         line = ' '.join(args)  # Rejoin args for regex parsing
         name = parse.parse_non_kv(line)
         kvs = parse.parse_key_values(line[len(name):])
-        uid = self.api.Node.create(parent=parent, name=name, **kvs)
+        uid = self.api.Node.create(name=name, **kvs)
         self._print("Added node %d " % uid)
+        if parent:
+            self.api.Edge.create(uid, parent, type=graph.EdgeTypes.parent.name)
+        return uid
+
+    def show_cmd(self, subparser):
+        """Display info about a node.
+
+        Examples:
+            atomic show <nodeID>
+        """
+        p_show = subparser.add_parser('show', help=self.show_cmd.__doc__)
+        p_show.add_argument('uid', help='Node to show', type=int)
+        p_show.set_defaults(func=self.show)
+
+    def show(self, uid: int, **kwargs):
+        """Show details about a Node in the graph.
+
+        Arguments:
+            uid (int): ID of the node.
+            **kwargs: Spillover keywords arguments from the passed
+                :class:`.argparse.Namespace` object.
+
+        Returns:
+            dict: The retrieved node.
+
+        Raises:
+            AtomicError: If the node doesn't exist.
+        """
+        n = self.api.Node.get(uid)
+        if n is None:
+            raise AtomicError("Node %d not found" % uid)
+        self._print(graph.Node(**n))  # Convert to Node object for display
+        return n
 
     def update_cmd(self, subparser):
         """Update
@@ -150,20 +199,6 @@ class Reactor:
 
     def delete(self, index=-1, **kwargs):
         self.api.Node.delete(index)
-
-    def show_cmd(self, subparser):
-        """Display info about a node.
-
-        Examples:
-            atomic show <nodeID>
-        """
-        p_show = subparser.add_parser('show', help=self.show_cmd.__doc__)
-        p_show.add_argument('index', help='Node to show', type=int)
-        p_show.set_defaults(func=self.show)
-
-    def show(self, index, **kwargs):
-        n = self.api.Node.get(index)
-        self._print(graph.Node(**n))
 
     def list_cmd(self, subparser):
         """List nodes.
@@ -218,7 +253,7 @@ class Reactor:
 def main():
     api = fileapi.FileAPI()
     cli = Reactor(api).setup()
-    from atomic import shell  # Prevents circular dependency
+    from atomic.photon import shell  # Prevents circular dependency
     cli.parser.set_defaults(func=shell.Valence.run)
     cli.process()
 
