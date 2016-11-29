@@ -76,9 +76,9 @@ class Reactor:
             AtomicError: If any error is encountered during function
                 invocation.
         """
-        self.logger.debug("Pre-process: %s" % args)
+        # self.logger.debug("Pre-process: %s" % args)
         ns = self.parser.parse_args(args)
-        self.logger.debug("Post-parse: %s" % ns)
+        # self.logger.debug("Post-parse: %s" % ns)
         try:
             ns.func(**vars(ns))
         except AtomicError as e:
@@ -251,7 +251,7 @@ class Reactor:
 
 
 def main():
-    api = fileapi.FileAPI()
+    api = fileapi.FileAPI(persist=True)
     cli = Reactor(api).setup()
     from atomic.photon import shell  # Prevents circular dependency
     cli.parser.set_defaults(func=shell.Valence.run)
