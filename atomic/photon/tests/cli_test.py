@@ -185,8 +185,7 @@ class ReactorTestCase(unittest.TestCase):
         ),
         ShowTestCase(
             name='basic',
-            history=[partial(fileapi.FileNodeAPI.create,
-                             name='basic')],
+            history=[partial(fileapi.FileNodeAPI.create, name='basic')],
             cli_args='show 1',
             func_kwargs={'uid': 1},
             exp={'uid': 1, 'name': 'basic'},
@@ -216,7 +215,6 @@ class ReactorTestCase(unittest.TestCase):
     def test_show(self):
         """Test for the 'atomic show' procedure."""
         for tc in self.showTestCases:
-
             if isinstance(tc.err, SystemExit):
                 continue  # Skip tests for invalid CLI input
 
@@ -234,3 +232,80 @@ class ReactorTestCase(unittest.TestCase):
                     self.assertDictEqual(tc.exp,
                                          self.reactor.show(**tc.func_kwargs))
                     # assert 'Added node' in self.reactor.out.getvalue()
+
+    ListTestCase = namedtuple(
+        'ListTestCase', (
+            'name',   # str: Name of testcase
+            'history',  # List[fn]: Pre-test state setup, as curried functions
+            'cli_args',  # str: CLI command
+            'err',  # Exception: Expected exception to be raised
+            'func_kwargs',  # dict: Keyword arguments to command function
+            'exp'  # obj: Expected return from command
+        )
+    )
+    listTestCases = (
+        ListTestCase(
+            name='no nodes in graph',
+            history=[],
+            cli_args='list',
+            err=None,
+            func_kwargs={},
+            exp=None
+        ),
+        ListTestCase(
+            name='one node',
+            history=[partial(fileapi.FileNodeAPI.create, name='one node')],
+            cli_args='list',
+            err=None,
+            func_kwargs=None,
+            exp=[{'uid': 1, 'name': 'one node'}]
+        ),
+        ListTestCase(
+            name='three nodes',
+            history=[partial(fileapi.FileNodeAPI.create, name='one'),
+                     partial(fileapi.FileNodeAPI.create, name='two'),
+                     partial(fileapi.FileNodeAPI.create, name='three')],
+            cli_args='list',
+            err=None,
+            func_kwargs=None,
+            exp=[
+                    {'uid': 1, 'name': 'one'},
+                    {'uid': 2, 'name': 'two'},
+                    {'uid': 3, 'name': 'three'},
+                ]
+        ),
+    )
+
+    def test_list_cmd(self):
+        for tc in self.listTestCases:
+            with self.subTest(name=tc.name):
+                with patch.object(self.reactor, 'list', autospec=True) as fn:
+                    # On invalid input, the CLI raises a SystemExit
+                    if isinstance(tc.err, SystemExit):
+                        with self.assertRaises(SystemExit):
+                            self.reactor.process(tc.func_kwargs)
+                    else:  # Valid input
+                        try:
+                            self.reactor.setup()  # To register the mock
+                            self.reactor.process(shlex.split(tc.cli_args))
+                            assert fn.call_count == 1  # called once
+                            _, kw = fn.call_args  # kwargs
+                            assert_dict_in_dict(tc.func_kwargs, kw)
+                        except SystemExit as e:  # Catches SystemExit
+                            self.fail("Parser choked on: " % e)
+
+    def test_list(self):
+        for tc in self.listTestCases:
+            if isinstance(tc.err, SystemExit):
+                continue  # Skip tests for invalid CLI input
+
+            for fn in tc.history:
+                fn(self.api.Node)
+
+            with self.subTest(name=tc.name):
+                if tc.err:
+                    with self.assertRaises(tc.err):
+                        self.reactor.list(**tc.func_kwargs)
+                else:
+                    self.assertListEqual(tc.exp,
+                                         self.reactor.list(**tc.func_kwargs))

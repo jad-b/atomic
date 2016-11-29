@@ -155,6 +155,25 @@ class Reactor:
         self._print(graph.Node(**n))  # Convert to Node object for display
         return n
 
+    def list_cmd(self, subparser):
+        """List nodes.
+
+        Examples:
+            atomic list
+            atomic list key=value
+            atomic list q=Lucene||Solr, haven't decided
+        """
+        p_list = subparser.add_parser(
+            'list', help=self.list_cmd.__doc__, aliases=['ls'])
+        p_list.set_defaults(func=self.list)
+
+    def list(self, **kwargs):
+        self.logger.debug("Listing nodes")
+        self._print("Nodes:\n=====")
+        nodes = self.api.Node.get()  # Grab all nodes
+        display.print_tree(nodes)
+        return nodes
+
     def update_cmd(self, subparser):
         """Update
 
@@ -199,24 +218,6 @@ class Reactor:
 
     def delete(self, index=-1, **kwargs):
         self.api.Node.delete(index)
-
-    def list_cmd(self, subparser):
-        """List nodes.
-
-        Examples:
-            atomic list
-            atomic list key=value
-            atomic list q=Lucene||Solr, haven't decided
-        """
-        p_list = subparser.add_parser(
-            'list', help=self.list_cmd.__doc__, aliases=['ls'])
-        p_list.set_defaults(func=self.list)
-
-    def list(self, **kwargs):
-        self.logger.debug("Listing nodes")
-        self._print("Nodes:\n=====")
-        nodes = self.api.Node.get()  # Grab all nodes
-        display.print_tree(nodes)
 
     def link(self, src, dest, type, kvs=None, *args, **kwargs):
         if kvs is not None:
