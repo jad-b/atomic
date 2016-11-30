@@ -405,3 +405,75 @@ class ReactorTestCase(unittest.TestCase):
                 else:
                     self.assertDictEqual(
                         tc.exp, self.reactor.update(**tc.func_kwargs))
+
+    DeleteTestCase = namedtuple(
+        'DeleteTestCase', (
+            'name',   # str: Name of testcase
+            'history',  # List[fn]: Pre-test state setup, as curried functions
+            'cli_args',  # str: CLI command
+            'err',  # Exception: Expected exception to be raised
+            'func_kwargs',  # dict: Keyword arguments to command function
+            'exp'  # obj: Expected return from command
+        )
+    )
+    deleteTestCases = (
+        DeleteTestCase(
+            name='index missing',
+            history=[],
+            cli_args='delete',
+            err=SystemExit(),
+            func_kwargs={},
+            exp=None,
+        ),
+        DeleteTestCase(
+            name='bad index',
+            history=[],
+            cli_args='delete 13',
+            err=AtomicError,
+            func_kwargs={},
+            exp=None,
+        ),
+        DeleteTestCase(
+            name='delete node',
+            history=[partial(fileapi.FileNodeAPI.create)],
+            cli_args='delete 1',
+            err=None,
+            func_kwargs={'index': 1},
+            exp=1,
+        ),
+    )
+
+    def test_delete_cmd(self):
+        for tc in self.deleteTestCases:
+            with self.subTest(name=tc.name):
+                with patch.object(self.reactor, 'delete', autospec=True) as fn:
+                    self.reactor.setup()  # To register the mock
+                    # On invalid input, the CLI raises a SystemExit
+                    if isinstance(tc.err, SystemExit):
+                        with self.assertRaises(SystemExit):
+                            self.reactor.process(tc.cli_args)
+                    else:  # Valid input
+                        try:
+                            self.reactor.process(shlex.split(tc.cli_args))
+                            assert fn.call_count == 1  # called once
+                            _, kw = fn.call_args  # kwargs
+                            assert_dict_in_dict(tc.func_kwargs, kw)
+                        except SystemExit as e:  # Catches SystemExit
+                            self.fail("Parser choked on: " % e)
+
+    def test_delete(self):
+        for tc in self.deleteTestCases:
+            if isinstance(tc.err, SystemExit):
+                continue  # Skip tests for invalid CLI input
+
+            self.reset()
+            for fn in tc.history:
+                fn(self.api.Node)
+
+            with self.subTest(name=tc.name):
+                if tc.err:
+                    with self.assertRaises(tc.err):
+                        self.reactor.delete(**tc.func_kwargs)
+                else:
+                    self.assertEqual(
+                        tc.exp, self.reactor.delete(**tc.func_kwargs))

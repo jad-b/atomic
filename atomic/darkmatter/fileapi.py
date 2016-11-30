@@ -132,8 +132,8 @@ class FileNodeAPI(api.NodeAPISpec):
         """Remove a node from the graph."""
         try:
             self.G.remove_node(idx)
-        except nx.exception.NetworkXError:
-            return ValueError("{:d} wasn't found in the graph".format(idx))
+        except nx.exception.NetworkXError as e:
+            raise AtomicError("Node {:d} not found".format(idx)) from e
         _save(self.G, self.filename)
 
     def binary_add(self, item):

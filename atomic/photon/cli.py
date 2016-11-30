@@ -241,6 +241,7 @@ class Reactor:
 
     def delete(self, index=-1, **kwargs):
         self.api.Node.delete(index)
+        return index
 
     def link(self, src, dest, type, kvs=None, *args, **kwargs):
         if kvs is not None:
