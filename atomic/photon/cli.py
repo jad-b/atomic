@@ -170,9 +170,13 @@ class Reactor:
     def list(self, **kwargs):
         self.logger.debug("Listing nodes")
         self._print("Nodes:\n=====")
-        nodes = self.api.Node.get()  # Grab all nodes
-        display.print_tree(nodes)
-        return nodes
+        nodes = list(self.api.Node.get())  # Grab all nodes
+        if not nodes:
+            return []
+        else:
+            nodes = list(nodes)
+            display.print_tree(nodes)
+            return list(nodes)
 
     def update_cmd(self, subparser):
         """Update
@@ -185,9 +189,9 @@ class Reactor:
                                         aliases=['u'])
         p_update.add_argument(
             'index', help='Index of node to update', type=int)
-        p_update.add_argument('args', nargs='+',
+        p_update.add_argument('args', nargs='*',
                               help='<Node name>... [key=value...]')
-        p_update.add_argument('-r', '--remove', help='Properties to remove',
+        p_update.add_argument('--rm', '--remove', help='Properties to remove',
                               nargs='+')
         p_update.add_argument('--replace', help='Replace the given Node',
                               action='store_true')
@@ -203,6 +207,7 @@ class Reactor:
                 for prop in remove:
                     kvs[prop] = None
             self.api.Node.patch(index, **kvs)
+        return self.api.Node.get(index)
 
     def delete_cmd(self, subparser):
         """Command to remove nodes.

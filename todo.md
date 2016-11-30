@@ -3,7 +3,11 @@
 '?' means an active question.
 '=' means in progress.
 
-* [ ] Store Actions, Thoughts, and Objects
+* [=] Store Actions, Thoughts, and Objects
+    * [=] CLI
+        * [=] CRUD Operations on Nodes & Edges
+            * [x] Create CLI class ('atomic.photon.cli.Reactor')
+            * [=] Unittest CRUD & linking
     * [ ] Prioritization
         * [ ] Binary Search
             * [ ] O(1) Indexing
@@ -12,7 +16,11 @@
     * [ ] Walk the graph
         * [ ] Custom walk functions
             * [ ] Attribute filtering
-            * [ ]
         * [ ] Searching
-            * [ ] DFS
-            * [ ] BFS
+           * [ ] DFS
+           * [ ] BFS
+* Write custom backends
+    * [ ] Postgresql extension
+    * [ ] GitHub
+    * [ ] JIRA
+    * [ ] Web Crawler

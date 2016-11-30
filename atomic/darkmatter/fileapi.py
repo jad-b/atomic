@@ -108,6 +108,8 @@ class FileNodeAPI(api.NodeAPISpec):
 
     def update(self, idx, **kwargs):
         """Update an item in-place."""
+        if idx not in self.G.node:
+            raise AtomicError("Node %d not found" % idx)
         self.G.node[idx] = {**self.G.node[idx], **kwargs}
         _save(self.G, self.filename)
 

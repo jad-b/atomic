@@ -22,6 +22,10 @@ class Serial:
     def current(self):
         return self._index
 
+    def reset(self):
+        """Reset the serial to 1."""
+        self._index = 1
+
     def __next__(self):
         return self.index
 

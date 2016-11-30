@@ -22,18 +22,18 @@ def toplevel(G):
     return (n for n in G if not G.pred[n])
 
 
-def hierarchy(G):
+def hierarchy(G, edge_type=EdgeTypes.parent):
     """Produce child nodes in a depth-first order."""
     for root in toplevel(G):
         dq = deque()
-        yield Node(root, **G.node[root]), len(dq)  # Depth 0
+        yield G.node[root], len(dq)  # Depth 0
         # Iterate over all children
         dq.append(root)
         for src, dest in nx.dfs_edges(G, source=root):
             while len(dq) > 0 and dq[-1] != src:
                 dq.pop()  # Unwind the stack
-            if G.edge[src][dest].get('type') == EdgeTypes.PARENT:
-                yield Node(dest, **G.node[dest]), len(dq)
+            if G.edge[src][dest].get('type') == edge_type:
+                yield G.node[dest], len(dq)
             dq.append(dest)
 
 

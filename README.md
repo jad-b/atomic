@@ -3,15 +3,15 @@ atomic
 Complexity divided.
 
 ## What it has/can do
-* Provide a modular API for interacting with graphs, which can be extended for
-  _any_ custom backend.
-  same graph.
-* Maintain a data model as arbitrary as JSON, or defined as a Python class.
+* Provide a simple API for overlaying Graph interactions on top of data sources:
+  databases, third-party APIs, web crawling, and simple in-memory graphs.
+* Keep a schema as arbitrary as JSON, or tightly-defined as a Python class.
 * "Walk" your graph with custom operations.
 * Built-in notions of sequencing & hierarchy, w/ common operations on such
   provided.
 
-## What I Want It To Do
+## Where It Could Go
+* Add operations for partitioning graphs
 * Event-driven architecture makes it easy for multiple actors to work on the
 * Partition your graph across distributed backends.
 * Supports the interaction of separate graphs
@@ -37,7 +37,7 @@ classes are supplied. While these classes simply set the keys and ID as attribut
 they provide a starting point for inheritance or composition to provide
 "gradual" schema enforcement. With this, representing a ToDo item is easy;
 subclass Node, set required attributes as arguments in `__init__`, and you're
-not free to add methods and schema validation as you wish. As long your object can
+now free to add methods and schema validation as you wish. As long your object can
 become JSON when `to_json` is called, you maintain compatibility.
 
 
@@ -50,6 +50,7 @@ made to represent an action.
 ### On the Word "Node"
 Does a node, by any other name, make more sense to a lay-person?
 
+- __entity__: a thing with distinct and independent existence.
 - __node__: a point at which lines or pathways intersect or branch; a central or connecting point
 - __item__: an individual article or unit, especially one that is part of a list, collection, or
   set
