@@ -90,14 +90,6 @@ class FileNodeAPI(api.NodeAPISpec):
         serial_idx = max(self.G.nodes_iter()) + 1 if len(self.G) > 1 else 1
         self.serial = serial.Serial(serial_idx)
 
-    def get(self, idx=None, **kwargs):
-        """Retrieve an item by index (uuid)."""
-        if idx is None:
-            self.logger.debug("Retrieving all nodes")
-            return graph.hierarchy(self.G)
-        self.logger.debug("Retrieving node w/ id=%d", idx)
-        return self.G.node.get(idx)
-
     def create(self, **kwargs):
         idx = self.serial.index
         kwargs['uid'] = idx
@@ -106,21 +98,34 @@ class FileNodeAPI(api.NodeAPISpec):
         return idx
         _save(self.G, self.filename)
 
-    def update(self, idx, **kwargs):
+    def get(self, idx=None, **kwargs):
+        """Retrieve an item by index (uuid)."""
+        if idx is None:
+            self.logger.debug("Retrieving all nodes")
+            return graph.hierarchy(self.G)
+        self.logger.debug("Retrieving node id=%d", idx)
+        return self.G.node.get(idx)
+
+    def update(self, idx: int, **kwargs):
         """Update an item in-place."""
-        if idx not in self.G.node:
-            raise AtomicError("Node %d not found" % idx)
-        self.G.node[idx] = {**self.G.node[idx], **kwargs}
+        if self.get(idx) is None:
+            raise AtomicError("Node %d not found" % int(idx))
+        kwargs['uid'] = idx
+        self.G.node[idx] = kwargs
         _save(self.G, self.filename)
 
     def patch(self, idx, *args, **kwargs):
         """Modify item attributes."""
-        node = self.G.node[idx]
+        self.logger.debug("Patching %d", idx)
+        node = self.get(idx)
+        if node is None:
+            raise AtomicError("Node %d not found" % int(idx))
         for k, v in kwargs.items():
             if v is None:
                 del node[k]
             else:
                 node[k] = v
+        self.update(idx, **node)
         _save(self.G, self.filename)
 
     def delete(self, idx):

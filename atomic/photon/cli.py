@@ -116,14 +116,33 @@ class Reactor:
             AtomicError: If the node can't be created, or the parent doesn't
                 exist.
         """
-        line = ' '.join(args)  # Rejoin args for regex parsing
-        name = parse.parse_non_kv(line)
-        kvs = parse.parse_key_values(line[len(name):])
-        uid = self.api.Node.create(name=name, **kvs)
+        attrs = self._parse_name_kvs(args)
+        uid = self.api.Node.create(**attrs)
         self._print("Added node %d " % uid)
         if parent:
             self.api.Edge.create(uid, parent, type=graph.EdgeTypes.parent.name)
         return uid
+
+    def _parse_name_kvs(self, args):
+        """Parses the node name as a special-case.
+
+        Example::
+
+            atomic <cmd> <name w/ optional spaces> key1=value one key2=...
+
+        Args:
+            args (List[str]): List of strings, such as what :func:`shlex.split`
+                would produce.
+        Returns:
+            dict: Dictionary containing a 'name' key, if present, and a any and
+                all parsed key-values and tags.
+        """
+        line = ' '.join(args)  # Rejoin args for regex parsing
+        name = parse.parse_non_kv(line)
+        kvs = parse.parse_key_values(line[len(name):])
+        if name:
+            kvs.setdefault('name', name)
+        return kvs
 
     def show_cmd(self, subparser):
         """Display info about a node.
@@ -192,21 +211,20 @@ class Reactor:
         p_update.add_argument('args', nargs='*',
                               help='<Node name>... [key=value...]')
         p_update.add_argument('--rm', '--remove', help='Properties to remove',
-                              nargs='+')
+                              nargs='+', dest='remove')
         p_update.add_argument('--replace', help='Replace the given Node',
                               action='store_true')
         p_update.set_defaults(func=self.update)
 
     def update(self, index, args, remove=None, replace=False, **kwargs):
-        line = ' '.join(args)  # Rejoin args for regex parsing
-        kvs = parse.parse_key_values(line)
-        if replace:
-            self.api.Node.update(index, **kvs)
-        else:  # Assemble patch
+        attrs = self._parse_name_kvs(args)
+        if replace:  # a la PUT
+            self.api.Node.update(index, **attrs)
+        else:  # a la PATCH
             if remove is not None:
-                for prop in remove:
-                    kvs[prop] = None
-            self.api.Node.patch(index, **kvs)
+                for prop in remove:  # 'None' marks them for removal
+                    attrs[prop] = None
+            self.api.Node.patch(index, **attrs)
         return self.api.Node.get(index)
 
     def delete_cmd(self, subparser):

@@ -17,7 +17,7 @@ def assert_dict_in_dict(a, b):
     assert isinstance(a, dict) and isinstance(b, dict)
     for k, v in a.items():
         assert k in b
-        assert a[k] == b[k], str(b)
+        assert a[k] == b[k], ("\nExp: %s\nObs: %s" % (str(a), str(b)))
 
 
 class ReactorTestCase(unittest.TestCase):
@@ -343,17 +343,18 @@ class ReactorTestCase(unittest.TestCase):
             history=[],
             cli_args='update 999999',
             err=AtomicError,
-            func_kwargs={'index': '999999', 'args': []},
+            func_kwargs={'index': 999999, 'args': []},
             exp=[]
         ),
         UpdateTestCase(
             name='replace node',
             history=[partial(fileapi.FileNodeAPI.create, name='one',
                              key1='value1', tag1='')],
-            cli_args='update --replace 1 key1=valueOne key2=value two',
+            cli_args='update --replace 1 one key1=valueOne key2=value two',
             err=None,
-            func_kwargs={'index': 1,
-                         'args': ['key1=valueOne', 'key2=value', 'two']},
+            func_kwargs={'index': 1, 'replace': True,
+                         'args': ['one', 'key1=valueOne', 'key2=value',
+                                  'two']},
             exp={'uid': 1, 'name': 'one',   # tag1 is gone
                  'key1': 'valueOne', 'key2': 'value two'},
         ),
@@ -364,7 +365,7 @@ class ReactorTestCase(unittest.TestCase):
             cli_args='update 1 key1=value one --rm key2',
             err=None,
             func_kwargs={'index': 1, 'args': ['key1=value', 'one'],
-                         'remove': ['tag1']},
+                         'remove': ['key2']},
             exp={'uid': 1, 'name': 'one',
                  'key1': 'value one', 'tag1': ''},
         ),
