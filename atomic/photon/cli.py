@@ -243,13 +243,6 @@ class Reactor:
         self.api.Node.delete(index)
         return index
 
-    def link(self, src, dest, type, kvs=None, *args, **kwargs):
-        if kvs is not None:
-            key_values = parse.parse_key_values(' '.join(kvs))
-        else:
-            key_values = {}
-        self.api.Edge.add(src, dest, type_=type, **key_values)
-
     def link_cmd(self, subparser):
         """Link two nodes.
 
@@ -261,15 +254,22 @@ class Reactor:
         p_link = subparser.add_parser(
             'link', help=self.link_cmd.__doc__, aliases='l')
         p_link.add_argument('src', help='Starting node', type=int)
-        p_link.add_argument('dest', help='Destination node', type=int)
+        p_link.add_argument('dst', help='Destination node', type=int)
         p_link.add_argument('type', help='Relationship type',
-                            choices=[graph.EdgeTypes.parent,
-                                     graph.EdgeTypes.related,
-                                     graph.EdgeTypes.precedes],
-                            default=graph.EdgeTypes.related)
-        p_link.add_argument('kvs', nargs='*', help='key=value...')
-        p_link.add_argument('-d', '--delete', help='Delete the link')
+                            default='parent')
+        p_link.add_argument('args', nargs='*',
+                            help='<Node name>... [key=value...]')
+        p_link.add_argument('-d', '--delete', help='Delete the link',
+                            action='store_true')
         p_link.set_defaults(func=self.link)
+
+    def link(self, src, dst, type, args, delete=False, **kwargs):
+        """Create, replace, or delete a link."""
+        if delete:
+            self.api.Edge.delete(src, dst)
+        else:
+            key_values = parse.parse_key_values(' '.join(args))
+            return self.api.Edge.create(src, dst, type=type, **key_values)
 
     def _print(self, *args, **kwargs):
         print(*args, file=self.out, **kwargs)

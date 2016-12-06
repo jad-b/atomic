@@ -199,7 +199,7 @@ class FileEdgeAPI(api.EdgeAPISpec):
                 return None
 
     def create(self, src: int, dst: int,
-               type=graph.EdgeTypes.related.name, **kwargs):
+               type='related', **kwargs):
         """Add an edge to the Graph."""
         try:
             self.G.node[src]
@@ -209,11 +209,13 @@ class FileEdgeAPI(api.EdgeAPISpec):
                 "Cannot create Edge (%d, %d); node(s) not found" % (src, dst))
         self.logger.debug("Adding edge between %d => %d", src, dst)
         data = dict(kwargs)
+        # Add essential fields
         data['src'] = src
         data['dst'] = dst
         data['type'] = type
         self.G.add_edge(src, dst, **data)
         _save(self.G, self.filename)
+        return data
 
     def update(self, src, dst, **kwargs):
         """Update an edge's attributes."""
@@ -222,5 +224,9 @@ class FileEdgeAPI(api.EdgeAPISpec):
 
     def delete(self, src, dst, **kwargs):
         """Delete an edge from the graph."""
+        try:
+            self.G.edge[src][dst]
+        except KeyError as e:
+            raise AtomicError("Edge (%d, %d) not found", src, dst)
         self.G.remove_edge(src, dst)
         _save(self.G, self.filename)

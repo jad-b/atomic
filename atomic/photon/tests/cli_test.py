@@ -477,3 +477,111 @@ class ReactorTestCase(unittest.TestCase):
                 else:
                     self.assertEqual(
                         tc.exp, self.reactor.delete(**tc.func_kwargs))
+
+    LinkTestCase = namedtuple(
+        'LinkTestCase', (
+            'name',   # str: Name of testcase
+            'history',  # List[fn]: Pre-test state setup, as curried functions
+            'cli_args',  # str: CLI command
+            'err',  # Exception: Expected exception to be raised
+            'func_kwargs',  # dict: Keyword arguments to command function
+            'exp'  # obj: Expected return from command
+        )
+    )
+    linkTestCases = (
+        LinkTestCase(
+            name='src missing', history={}, cli_args='link',
+            err=SystemExit(), func_kwargs={}, exp=None,
+        ),
+        LinkTestCase(
+            name='dest missing', history={}, cli_args='link 1',
+            err=SystemExit(), func_kwargs={}, exp=None,
+        ),
+        LinkTestCase(
+            name='type missing', history={}, cli_args='link 1 2',
+            err=SystemExit(), func_kwargs={}, exp=None,
+        ),
+        LinkTestCase(
+            name='link parent to child',
+            history={'node': [partial(fileapi.FileNodeAPI.create),
+                              partial(fileapi.FileNodeAPI.create)]},
+            cli_args='link 1 2 parent',
+            err=None,
+            func_kwargs={'src': 1, 'dst': 2, 'type': 'parent', 'args': []},
+            exp={'src': 1, 'dst': 2, 'type': 'parent'},
+        ),
+        LinkTestCase(
+            name='delete link',
+            history={'node': [partial(fileapi.FileNodeAPI.create),
+                              partial(fileapi.FileNodeAPI.create)],
+                     'edge': [partial(
+                         fileapi.FileEdgeAPI.create,
+                         src=1, dst=2, type='parent', key1='value1')
+            ]},
+            cli_args='link 1 2 parent -d',
+            err=None,
+            func_kwargs={'src': 1, 'dst': 2, 'type': 'parent',
+                         'delete': True, 'args': []},
+            exp=None,
+        ),
+        LinkTestCase(
+            name='error when deleting non-existent link',
+            history={'node': [partial(fileapi.FileNodeAPI.create),
+                              partial(fileapi.FileNodeAPI.create)]},
+            cli_args='link 1 2 parent -d',
+            err=AtomicError,
+            func_kwargs={'src': 1, 'dst': 2, 'type': 'parent', 'args': [],
+                         'delete': True},
+            exp=None,
+        ),
+        LinkTestCase(
+            name='override link',
+            history={'node': [partial(fileapi.FileNodeAPI.create),
+                              partial(fileapi.FileNodeAPI.create)],
+                     'edge': [
+                         partial(fileapi.FileEdgeAPI.create,
+                                 src=1, dst=2, type='parent', key1='value1')]},
+            cli_args='link 1 2 precedes key2=value2',
+            err=None,
+            func_kwargs={'src': 1, 'dst': 2, 'type': 'precedes',
+                         'args': ['key2=value2']},
+            exp={'src': 1, 'dst': 2, 'type': 'precedes', 'key2': 'value2'}
+        ),
+    )
+
+    def test_link_cmd(self):
+        for tc in self.linkTestCases:
+            with self.subTest(name=tc.name):
+                with patch.object(self.reactor, 'link', autospec=True) as fn:
+                    self.reactor.setup()  # To register the mock
+                    # On invalid input, the CLI raises a SystemExit
+                    if isinstance(tc.err, SystemExit):
+                        with self.assertRaises(SystemExit):
+                            self.reactor.process(tc.cli_args)
+                    else:  # Valid input
+                        try:
+                            self.reactor.process(shlex.split(tc.cli_args))
+                            assert fn.call_count == 1  # called once
+                            _, kw = fn.call_args  # kwargs
+                            assert_dict_in_dict(tc.func_kwargs, kw)
+                        except SystemExit as e:  # Catches SystemExit
+                            self.fail("Parser choked on: %s" % e)
+
+    def test_link(self):
+        for tc in self.linkTestCases:
+            if isinstance(tc.err, SystemExit):
+                continue  # Skip tests for invalid CLI input
+
+            self.reset()
+            for fn in tc.history.get('node', []):
+                fn(self.api.Node)
+            for fn in tc.history.get('edge', []):
+                fn(self.api.Edge)
+
+            with self.subTest(name=tc.name):
+                if tc.err:
+                    with self.assertRaises(tc.err):
+                        self.reactor.link(**tc.func_kwargs)
+                else:
+                    self.assertEqual(
+                        tc.exp, self.reactor.link(**tc.func_kwargs))
