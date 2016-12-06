@@ -53,6 +53,12 @@ class Reactor:
                 instantiation and setup in one line.
         """
         self.parser = argparse.ArgumentParser()
+        self.parser.add_argument(
+            '-g', '--graph',
+            help=("Name of graph to load. If it ends in .json, it will be "
+                  "assumed to be a filepath. If it doesn't, a ~/.{name}.json "
+                  "file will be created."),
+            default='.atomic.json')
         subparsers = self.parser.add_subparsers(
             help='sub-command help', dest='command')
         # Hook up subcommands
@@ -279,7 +285,8 @@ def main():
     api = fileapi.FileAPI(persist=True)
     cli = Reactor(api).setup()
     from atomic.photon import shell  # Prevents circular dependency
-    cli.parser.set_defaults(func=shell.Valence.run)
+    valence = shell.Valence(cli)
+    cli.parser.set_defaults(func=valence.run)
     cli.process()
 
 

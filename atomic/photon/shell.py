@@ -6,7 +6,6 @@ import sys
 import traceback
 from importlib import reload
 
-from atomic.photon import cli
 from atomic.utils import log, parse
 
 
@@ -33,31 +32,31 @@ class ShlexMixin:
             except AttributeError:
                 # print("cmd=%s arg=%s line=%s" % (cmd, arg, line))
                 try:  # Use the CLI parser
-                    cli.process(self.parser, self.api, [cmd] +
-                                shlex.split(arg))
+                    self.reactor.process([cmd] + shlex.split(arg))
                 except SystemExit as e:
-                    if e.code == 0:  # It coo'.
+                    if e.code == 0:  # Nothing matching command found
                         return
-                    subparser_help = self._subparser_help(self.parser, cmd)
+                    subparser_help = self._subparser_help(
+                        self.reactor.parser, cmd)
                     if subparser_help:
                         print(subparser_help)
                     else:
-                        print(self.parser.format_help())
+                        print(self.reactor.parser.format_help())
 
     def do_help(self, line):
         if line:
-            s = self._subparser_help(self.parser, line)
+            s = self._subparser_help(self.reactor.parser, line)
             if s:
                 print(s)
             else:
                 print("Unrecognized command: '%s'" % line)
-                self.parser.print_help()
+                self.reactor.parser.print_help()
         else:
-            self.parser.print_help()
+            self.reactor.parser.print_help()
 
     def _subparser_help(self, parser, cmd):
         """Lookup the help dialog for a specific subparser."""
-        spa = next(a for a in parser._actions if
+        spa = next(a for a in self.reactor.parser._actions if
                    isinstance(a, argparse._SubParsersAction))
         d = dict(spa.choices.items())
         if cmd in d:
@@ -82,33 +81,67 @@ class ReloadMixin:
         """Save the graph before quitting."""
         return True
 
-    def do_quit(self, args):
-        return True
-
     def emptyline(self):
         """Handle empty lines by printing available options."""
         self.do_help('')
 
     def do_reload(self, *args):
-        """Live reload the shell's source code."""
+        """Live-reload the shell's source code."""
         raise self._ReloadException("Code reload requested by user")
 
-    @staticmethod
-    def _goodbye():
-        print('Goodbye,', os.getenv("USER", 'you person, you.'))
-        sys.exit(0)
+    def do_goodbye(self, *args):
+        raise self._QuitException("Goodbye, " +
+                                  os.getenv("USER",  'you person, you.'))
 
-    @classmethod
-    def loop(cls, *args, **kwargs):
+    do_quit = do_goodbye
+
+    # @classmethod
+    def loop(self):
         """Run the command loop until a KeyboardInterrupt is raised."""
-        v = None
         try:
-            v = cls(*args, **kwargs)
-            v.cmdloop()
+            self.cmdloop()
         except KeyboardInterrupt:
-            cls._goodbye()
-        except Exception:
-            return None
+            self.do_goodbye()
+
+    # @staticmethod
+    def run(self, **kwargs):
+        """Run the Valence command-line shell.
+
+        If an error is encountered during initialization, the user is given the
+        opportunity to fix the error without quitting the process. This process
+        will loop until the code initalizes without exception or the user
+        aborts.  The user can also initiate a code reload via 'reload', which
+        enters into a error-fix-retry loop.
+        """
+        v = self
+        from atomic.photon import shell
+        curr_id = id(shell.Valence)
+        while True:
+            # Act as if we're importing this code as a module
+            try:
+                v.cmdloop()  # Loop until special exception
+            except KeyboardInterrupt:
+                self._goodbye()
+            except shell.ReloadMixin._ReloadException:
+                while True:
+                    try:
+                        print("Reloading Valence ({:d}) shell...".format(
+                            curr_id), end="")
+                        reload(shell)
+                        print("reload complete.")
+                        v = shell.Valence(self.reactor)
+                        curr_id = id(shell.Valence)
+                        print("Restarting Valence ({:d}).".format(curr_id))
+                        break
+                    except:
+                        traceback.print_exception(*sys.exc_info())
+                        # Allow user to fix code before exiting
+                        if parse.input_bool('\nRetry?'):
+                            continue
+                        raise  # Exit program via exception
+            except shell.ReloadMixin._QuitException as qe:
+                print(qe)
+                break
 
     # Semi-private exception classes, only for use inside the ReloadMixin.
     class _ReloadException(Exception):
@@ -125,52 +158,15 @@ class ReloadMixin:
         def __str__(self):
             return self.message
 
-    @staticmethod
-    def run(api, parser, **kwargs):
-        """Run the Valence command-line shell.
-
-        If an error is encountered during initialization, the user is given the
-        opportunity to fix the error without quitting the process. This process
-        will loop until the code initalizes without exception or the user
-        aborts.  The user can also initiate a code reload via 'reload', which
-        enters into a error-fix-retry loop.
-        """
-        while True:
-            # Act as if we're importing this code as a module
-            from atomic import shell
-            try:
-                shell.Valence.loop(api, parser)
-            except shell.ReloadMixin._ReloadException:
-                while True:
-                    try:
-                        curr_id = id(shell.Valence)
-                        print("Reloading Valence ({:d}) shell...".format(
-                            curr_id), end="")
-                        reload(shell)
-                        print("reload complete. "
-                              "Restarting Valence ({:d}).".format(curr_id))
-                        curr_id = id(shell.Valence)
-                        break
-                    except:
-                        traceback.print_exception(*sys.exc_info())
-                        # Allow user to fix code before exiting
-                        if parse.input_bool('\nRetry?'):
-                            continue
-                        raise  # Exit program via exception
-            except shell.ReloadMixin._QuitException as qe:
-                print(qe)
-                break
-
 
 class Valence(ShlexMixin, ReloadMixin, cmd.Cmd):
     """Valence is the command-line shell a user interacts with."""
     intro = "Welcome to Valence."
     prompt = '(valence)> '
 
-    def __init__(self, api, parser):
+    def __init__(self, reactor):
         super().__init__()
-        self.api = api
-        self.parser = parser
+        self.reactor = reactor
         self.logger = log.get_logger('valence')
 
     def precmd(self, line):
