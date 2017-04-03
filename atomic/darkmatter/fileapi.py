@@ -3,6 +3,7 @@
 API implementation for using a local file as the data store.
 """
 import atexit
+import enum
 import json
 import os
 
@@ -16,9 +17,9 @@ from atomic.graph import graph, serial
 from atomic.utils import log
 
 
-DEFAULT_FILENAME = os.path.expanduser('~/atomic.json')
+DEFAULT_FILENAME = os.path.expanduser("~/atomic.json")
 
-_logger = log.get_logger('atomic')
+_logger = log.get_logger("atomic")
 
 
 def _load(filename=DEFAULT_FILENAME):
@@ -45,7 +46,7 @@ def _save(G, filename=DEFAULT_FILENAME):
     """
     if filename is None:
         return
-    with open(filename, 'w') as f:
+    with open(filename, "w") as f:
         data = json_graph.node_link_data(G)
         json.dump(data, f, indent=2)
     _logger.debug("Saved graph")
@@ -55,7 +56,15 @@ class FileAPI:
     """File-system backed implementation of the API."""
 
     def __init__(self, G=None, persist=None):
-        self.logger = log.get_logger('api')
+        """Initialize the instance.
+
+        Args:
+            G (:class:`~.networkx.DiGraph`): Graph instance. If ``None``, the
+                graph will attempt to be loaded using ``persist``.
+            persist (str or bool): Leveraged by :meth:`~.FileAPI.load_graph` to
+                load (or not load) the in-memory Graph.
+        """
+        self.logger = log.get_logger("api")
         if G is not None:
             self.G, self.filename = G, None
         else:
@@ -69,6 +78,19 @@ class FileAPI:
             atexit.register(_save, self.G, self.filename)
 
     def load_graph(self, persist):
+        """Controls instantiation of the in-memory Graph.
+
+        Args:
+            persist (:obj:bool or :obj:str): If False, a blank in-memory graph
+                is created. If True, the Graph is loaded from using the
+                :attr:`~.DEFAULT_FILENAME`. If a :obj:str, it is interpreted to
+                be a filepath to a file containing the graph.
+        Returns:
+            :class:`~.networkx.digraph.DiGraph`: A directed graph.
+
+        Raises:
+            ValueError: If ``persist`` isn't a :obj:str or :obj:bool.
+        """
         if not persist:
             return nx.DiGraph(), None
         elif isinstance(persist, bool):
@@ -83,6 +105,13 @@ class FileNodeAPI(api.NodeAPISpec):
     """File-system backed implementation of the Node API."""
 
     def __init__(self, G, logger, filename=None):
+        """Initialize the instance.
+
+        Args:
+            G (:class:`~.networkx.DiGraph`): Graph instance.
+            logger (:class:`~.logging.Logger`): Python logger.
+            filename (str): Filepath to save the Graph to.
+        """
         self.logger = logger
         self.G = G
         self.filename = filename
@@ -92,7 +121,7 @@ class FileNodeAPI(api.NodeAPISpec):
 
     def create(self, **kwargs):
         idx = self.serial.index
-        kwargs['uid'] = idx
+        kwargs["uid"] = idx
         self.logger.debug("Node.add: idx=%d kwargs=%s", idx, kwargs)
         self.G.add_node(idx, attr_dict=kwargs)
         return idx
@@ -101,22 +130,23 @@ class FileNodeAPI(api.NodeAPISpec):
     def get(self, idx=None, **kwargs):
         """Retrieve an item by index (uuid)."""
         if idx is None:
-            self.logger.debug("Retrieving all nodes")
+            self.logger.debug("Retrieve all nodes")
             return graph.hierarchy(self.G)
-        self.logger.debug("Retrieving node id=%d", idx)
+        self.logger.debug("Retrieve node id=%d", idx)
         return self.G.node.get(idx)
 
     def update(self, idx: int, **kwargs):
         """Update an item in-place."""
+        self.logger.debug("Update node %d", idx)
         if self.get(idx) is None:
             raise AtomicError("Node %d not found" % int(idx))
-        kwargs['uid'] = idx
+        kwargs["uid"] = idx
         self.G.node[idx] = kwargs
         _save(self.G, self.filename)
 
     def patch(self, idx, *args, **kwargs):
         """Modify item attributes."""
-        self.logger.debug("Patching %d", idx)
+        self.logger.debug("Patch node %d", idx)
         node = self.get(idx)
         if node is None:
             raise AtomicError("Node %d not found" % int(idx))
@@ -125,11 +155,13 @@ class FileNodeAPI(api.NodeAPISpec):
                 del node[k]
             else:
                 node[k] = v
-        self.update(idx, **node)
+        kwargs["uid"] = idx
+        self.G.node[idx] = kwargs
         _save(self.G, self.filename)
 
     def delete(self, idx):
         """Remove a node from the graph."""
+        self.logger.debug("Delete node %d", idx)
         try:
             self.G.remove_node(idx)
         except nx.exception.NetworkXError as e:
@@ -153,15 +185,15 @@ class FileNodeAPI(api.NodeAPISpec):
 
     def guided_prompt(self, lo, mid, hi):
         print("Bracketing: ({lo}, {mid}, {hi})"
-              .format(lo=Fore.RED + 'lo=' + str(lo) + Style.RESET_ALL,
-                      mid=Fore.YELLOW + 'mid=' + str(mid) + Style.RESET_ALL,
-                      hi=Fore.GREEN + 'hi=' + str(hi) + Style.RESET_ALL))
+              .format(lo=Fore.RED + "lo=" + str(lo) + Style.RESET_ALL,
+                      mid=Fore.YELLOW + "mid=" + str(mid) + Style.RESET_ALL,
+                      hi=Fore.GREEN + "hi=" + str(hi) + Style.RESET_ALL))
         ans = None
-        higher = ['h', 'k']
-        lower = ['l', 'j']
+        higher = ["h", "k"]
+        lower = ["l", "j"]
         while not ans:
             print("Higher[{higher}] or Lower[{lower}]: {items}".format(
-                higher=','.join(higher), lower=','.join(lower),
+                higher=",".join(higher), lower=",".join(lower),
                 items=self.items[mid]))
             try:
                 ans = input()
@@ -186,6 +218,13 @@ class FileNodeAPI(api.NodeAPISpec):
 class FileEdgeAPI(api.EdgeAPISpec):
 
     def __init__(self, G, logger, filename=None):
+        """Initialize the instance.
+
+        Args:
+            G (:class:`~.networkx.DiGraph`): Graph instance.
+            logger (:class:`~.logging.Logger`): Python logger.
+            filename (str): Filepath to save the Graph to.
+        """
         self.G = G
         self.logger = logger
         self.filename = filename
@@ -194,13 +233,15 @@ class FileEdgeAPI(api.EdgeAPISpec):
         """Retrieve an edge by id or source & dstination."""
         if kwargs == {}:  # Single item retrieval
             try:
+                self.logger.info("Retrieving edge (%d, %d)", src, dst)
                 return self.G.edge[src][dst]
             except KeyError:
                 return None
 
     def create(self, src: int, dst: int,
-               type='related', **kwargs):
+               type="related", **kwargs):
         """Add an edge to the Graph."""
+        self.logger.debug("Create edge (%d, %d)", src, dst)
         try:
             self.G.node[src]
             self.G.node[dst]
@@ -210,23 +251,60 @@ class FileEdgeAPI(api.EdgeAPISpec):
         self.logger.debug("Adding edge between %d => %d", src, dst)
         data = dict(kwargs)
         # Add essential fields
-        data['src'] = src
-        data['dst'] = dst
-        data['type'] = type
+        data["src"] = src
+        data["dst"] = dst
+        data["type"] = type
         self.G.add_edge(src, dst, **data)
         _save(self.G, self.filename)
         return data
 
     def update(self, src, dst, **kwargs):
         """Update an edge's attributes."""
+        self.logger.info("Update edge (%d, %d)", src, dst)
         self.G.edge[src][dst] = {**self.G.edge[src][dst], **kwargs}
         _save(self.G, self.filename)
 
     def delete(self, src, dst, **kwargs):
         """Delete an edge from the graph."""
+        self.logger.info("Delete edge (%d, %d)", src, dst)
         try:
             self.G.edge[src][dst]
         except KeyError as e:
             raise AtomicError("Edge (%d, %d) not found", src, dst)
         self.G.remove_edge(src, dst)
         _save(self.G, self.filename)
+
+
+class FileGraphAPI(api.GraphAPISpec):
+    """File-system backed implementation of the Graph API."""
+
+    def __init__(self, G, logger, filename=None):
+        """Initialize the instance.
+
+        Args:
+            G (:class:`~.networkx.DiGraph`): Graph instance.
+            logger (:class:`~.logging.Logger`): Python logger.
+            filename (str): Filepath to save the Graph to.
+        """
+        self.G = G
+        self.logger = logger
+        self.filename = filename
+
+    def search(self, type="depth", node=None):
+        """Search within a Graph.
+
+        Todo: Add choice for pre|post|in-order
+        Todo: Add choice for edge direction of incoming|outgoing|undirected
+
+        Args:
+            type (str): Depth or breadth.
+            node (int): ID of node to start from. If None, all nodes in the
+                Graph will be iterated through. How will they be iterated
+                through? Good question!
+
+        Returns:
+            (dict, distance): 2-tuple of the node's contents and its distance
+                from the starting node. If ``node`` is empty, than the distance
+                will be related to the last previous tuple with distance 0.
+        """
+        yield ({}, 0)

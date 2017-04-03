@@ -25,23 +25,25 @@ class ShlexMixin:
             return self.do_EOF()
         if cmd == '':
             return self.default(line)
-        else:
-            try:  # See if there's a method called 'cmd'
-                func = getattr(self, 'do_' + cmd)
-                return func(arg)
-            except AttributeError:
-                # print("cmd=%s arg=%s line=%s" % (cmd, arg, line))
-                try:  # Use the CLI parser
-                    self.reactor.process([cmd] + shlex.split(arg))
-                except SystemExit as e:
-                    if e.code == 0:  # Nothing matching command found
-                        return
-                    subparser_help = self._subparser_help(
-                        self.reactor.parser, cmd)
-                    if subparser_help:
-                        print(subparser_help)
-                    else:
-                        print(self.reactor.parser.format_help())
+
+        try:  # See if there's a method called 'cmd'
+            func = getattr(self, 'do_' + cmd)
+            return func(arg)
+        except AttributeError:
+            # print("cmd=%s arg=%s line=%s" % (cmd, arg, line))
+            pass
+
+        try:  # Use the CLI parser
+            self.reactor.process([cmd] + shlex.split(arg))
+        except SystemExit as e:
+            if e.code == 0:  # Nothing matching command found
+                return
+            subparser_help = self._subparser_help(
+                self.reactor.parser, cmd)
+            if subparser_help:
+                print(subparser_help)
+            else:
+                print(self.reactor.parser.format_help())
 
     def do_help(self, line):
         if line:
@@ -95,15 +97,6 @@ class ReloadMixin:
 
     do_quit = do_goodbye
 
-    # @classmethod
-    def loop(self):
-        """Run the command loop until a KeyboardInterrupt is raised."""
-        try:
-            self.cmdloop()
-        except KeyboardInterrupt:
-            self.do_goodbye()
-
-    # @staticmethod
     def run(self, **kwargs):
         """Run the Valence command-line shell.
 
@@ -121,8 +114,11 @@ class ReloadMixin:
             try:
                 v.cmdloop()  # Loop until special exception
             except KeyboardInterrupt:
-                self._goodbye()
+                print("Goodybe.")
+                break
             except shell.ReloadMixin._ReloadException:
+                # We're actually going to _replace_ the looping Valence
+                # instance with a new one, built from the reloaded code.
                 while True:
                     try:
                         print("Reloading Valence ({:d}) shell...".format(
@@ -133,7 +129,7 @@ class ReloadMixin:
                         curr_id = id(shell.Valence)
                         print("Restarting Valence ({:d}).".format(curr_id))
                         break
-                    except:
+                    except:  # Something failed while loading
                         traceback.print_exception(*sys.exc_info())
                         # Allow user to fix code before exiting
                         if parse.input_bool('\nRetry?'):

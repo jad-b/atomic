@@ -4,10 +4,10 @@
 '=' means in progress.
 
 * [=] Store Actions, Thoughts, and Objects
-    * [=] CLI
-        * [=] CRUD Operations on Nodes & Edges
+    * [x] CLI
+        * [x] CRUD Operations on Nodes & Edges
             * [x] Create CLI class ('atomic.photon.cli.Reactor')
-            * [=] Unittest CRUD & linking
+            * [x] Unittest CRUD & linking
     * [ ] Prioritization
         * [ ] Binary Search
             * [ ] O(1) Indexing

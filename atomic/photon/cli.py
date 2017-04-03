@@ -89,7 +89,7 @@ class Reactor:
             ns.func(**vars(ns))
         except AtomicError as e:
             print(e)
-        except:
+        except Exception:  # pylint: disable=broad-except
             self.logger.exception("The unexpected has occurred")
 
     def add_cmd(self, subparser):
@@ -194,12 +194,13 @@ class Reactor:
 
     def list(self, **kwargs):
         self.logger.debug("Listing nodes")
-        self._print("Nodes:\n=====")
         nodes = list(self.api.Node.get())  # Grab all nodes
         if not nodes:
+            print("Nothing was found. Perhaps all is lost?")
             return []
         else:
             nodes = list(nodes)
+            self._print("Nodes:\n=====")
             display.print_tree(nodes)
             return list(nodes)
 
@@ -278,6 +279,9 @@ class Reactor:
             return self.api.Edge.create(src, dst, type=type, **key_values)
 
     def _print(self, *args, **kwargs):
+        """Print to the instance's ``out`` attribute."""
+        if "file" in kwargs:
+            del kwargs["file"]
         print(*args, file=self.out, **kwargs)
 
 

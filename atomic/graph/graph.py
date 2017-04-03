@@ -50,14 +50,15 @@ class Node:
 
     def __str__(self) -> str:
         sio = StringIO()
-        header = '[{:d}] {:s}'.format(
-            self.uid, getattr(self, 'name', '<No Name>'))
-        sio.write('{}\n'.format(header))
+        header = "[{:d}] {:s}".format(
+            self.uid, getattr(self, "name", "<No Name>"))
+        sio.write("{}\n".format(header))
         for k, v in self.__dict__.items():
-            if k == 'name':
+            if k == "name":
                 continue
-            sio.write('  {key}: {value}\n'.format(key=k, value=v))
-        return sio.getvalue().rstrip('\n')
+            sio.write("{indent}{key}: {value}\n".format(indent=2*" ", key=k,
+                                                        value=v))
+        return sio.getvalue().rstrip("\n")
 
     def __repr__(self) -> str:
         return "{:d}) {:s}".format(self.uid,
